@@ -57,3 +57,4 @@ The Sauce panel runs a chain inside the render: band split (sub below 110 Hz, bo
 - Glue compressor presets use a stronger setting (Mix 40, thresh -10 dB), so the compression is audible.
 - v1.20: Trance Classic 138 reworked: real kick 45 attack and click, no Drive or Clip, much cleaner (harmonics -36 dB).
 - v1.21: older presets (Psy, Hard Dance, Punchy, Dark, Subby, Deep, Phat, Uplifting, Hard-Hitter) lengthened with a plateau shape.
+- v1.22: GUI fix, knob rows no longer run outside their panels (Amp, Output, Purr Trio, Glue timing).
