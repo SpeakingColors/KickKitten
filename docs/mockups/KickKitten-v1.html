@@ -546,7 +546,7 @@ function limiterFx(x,fs,p){
 function sauceFx(x,fs,p){
   const A=p.sauce/100;if(A<=0)return;
   const N=x.length,k=n=>p[n]/100*A,kP=k('sPunch'),kT=k('sThump'),kB=k('sBloom'),kC=k('sCrack'),kL=k('sLoud');
-  const lp4=(a,f)=>{const q1=bqMake('lp',f,fs),q2=bqMake('lp',f,fs);for(let i=0;i<a.length;i++)a[i]=bqRun(q2,bqRun(q1,a[i]));return a;};
+  const lp4=(a,f)=>{const q1=bqMake('lp',f,fs),q2=bqMake('lp',f,fs);for(let i=0;i<a.length;i++)a[i]=bqRun(q2,bqRun(q1,a[i]));const q3=bqMake('lp',f,fs),q4=bqMake('lp',f,fs);for(let i=a.length-1;i>=0;i--)a[i]=bqRun(q4,bqRun(q3,a[i]));return a;};/* forward and backward = zero phase, so the bands add back to the original with no leak */
   const pkOf=a=>{let m=1e-9;for(let i=0;i<a.length;i++){const v=Math.abs(a[i]);if(v>m)m=v;}return m;};
   const sat=(a,d)=>{const pk=pkOf(a),td=Math.tanh(d);for(let i=0;i<a.length;i++)a[i]=Math.tanh(d*a[i]/pk)*pk/td;};
   const pk0=pkOf(x),m=Math.min(N,Math.floor(0.12*fs));
@@ -554,7 +554,7 @@ function sauceFx(x,fs,p){
   const low=lp4(Float32Array.from(x),110),rest=new Float32Array(N);for(let i=0;i<N;i++)rest[i]=x[i]-low[i];
   const mid=lp4(Float32Array.from(rest),800),high=new Float32Array(N);for(let i=0;i<N;i++)high[i]=rest[i]-mid[i];
   const sm=Float32Array.from(mid),sl=Float32Array.from(low),sh=Float32Array.from(high);
-  sat(sm,7);sat(sl,4.5);sat(sh,4);
+  sat(sm,7);sat(sl,2.0);sat(sh,4);
   const y=new Float32Array(N);
   for(let i=0;i<N;i++){const t=i/fs;
     const bl=1+kB*1.6*Math.exp(-Math.pow((t-0.06)/0.04,2));
@@ -1217,7 +1217,7 @@ $('#kmP').onclick=()=>setKM(true);$('#kmS').onclick=()=>setKM(false);
 const mk=(name,tag,o)=>({name,tag,p:Object.assign({},o)});
 const D=()=>{const o={};SPEC.forEach(s=>o[s.id]=s.def);LK.forEach(k=>o[k]=k.endsWith('pol')?1:0);return o;};
 const SA=n=>SRCN.indexOf('Kick attack '+n),SC=n=>SRCN.indexOf('Kick click '+n);
-const TC=Object.assign(D(),{tailHz:55,startHz:900,sweep:30,curve:1,env:[[0,900,0],[4,464,0],[8,252,0],[16,208,0],[30,153,0],[50,110,0],[75,80,0],[100,55,0]],clickLvl:80,clickFreq:4800,clickLen:10,body:70,sub:90,hold:6,decay:280,ampShape:4.6,swell:30,drive:10,trans:5,fuzz:0,clip:5,sauce:60,sPunch:55,sThump:50,sBloom:0,sCrack:50,sLoud:10,sGlue:15,gThr:-14,gRat:4,gAtk:30,gRel:100,lim:0,limG:3,eMud:40,eChest:20,eShine:25});
+const TC=Object.assign(D(),{tailHz:55,startHz:900,sweep:30,curve:1,env:[[0,900,0],[4,464,0],[8,252,0],[16,208,0],[30,153,0],[50,110,0],[75,80,0],[100,55,0]],clickLvl:80,clickFreq:4800,clickLen:10,body:70,sub:90,hold:6,decay:280,ampShape:4.6,swell:30,drive:3,trans:0,fuzz:0,clip:2,sauce:60,sPunch:55,sThump:35,sBloom:0,sCrack:50,sLoud:10,sGlue:40,gThr:-10,gRat:4,gAtk:20,gRel:120,lim:0,limG:3,eMud:40,eChest:20,eShine:25});
 const FACTORY=[
  mk('Trance Classic 138','trance',TC),
  mk("Trance Snap",'trance',Object.assign({},TC,{tailHz:56.8,env:[[0,900,0],[4,464,0],[8,252,0],[16,208,0],[30,158,0],[50,114,0],[75,83,0],[100,57,0]],decay:268,clickLvl:30,clickLen:6,l0src:SA(31),l0lvl:50,l0len:40,l0hp:20,l1src:SC(31),l1lvl:25,l1len:40,l1hp:20,l1delay:0})),

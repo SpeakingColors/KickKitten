@@ -51,3 +51,7 @@ The Sauce panel runs a chain inside the render: band split (sub below 110 Hz, bo
 - 10 new trance presets that use those attacks and clicks (Trance Snap, Pop, Tick, Knock, Crack, Sizzle, Long, Deep, Rolling, Hard).
 - Chops re-cut: 40 ms each; attacks high-passed at 50 Hz, clicks at 100 Hz (was 70 ms and 1.5 kHz).
 - New Swell knob (Fall group): the low body grows in over the first ms like real trance kicks. Fixes boxy low mids.
+
+## v1.19
+- Fixed low-end distortion: the Sauce band split now uses zero-phase filters (the 55 Hz tail leaked into the mid band and was saturated hard), Thump saturation is gentler, and the preset Drive, Transistor and Clip are lower. Harmonics in the tail now sit near real kicks (about -26 dB).
+- Glue compressor presets use a stronger setting (Mix 40, thresh -10 dB), so the compression is audible.
