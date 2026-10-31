@@ -2,7 +2,7 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
-/* Layout: one fixed-size plugin window (1120x800) scaled as a whole, wood cheeks left and right.
+/* Layout: one fixed-size plugin window (1120x946) scaled as a whole, wood cheeks left and right.
    Looks: C PurrOne (default), A Neon Navy, B Purple Soda Pop. All colours come from these tokens. */
 :root{
   --ground:#121214; --panel:#1b1b1e; --panel2:#242428; --display:#08080a; --line:#34343a;
@@ -35,9 +35,9 @@ body{margin:0;color:var(--text);font:13px/1.35 "Barlow Condensed","Arial Narrow"
   overflow-x:hidden}
 #stage{display:flex;justify-content:center;width:100%}
 #wrap{position:relative;flex:none}
-#win{position:absolute;left:0;top:0;width:1120px;height:800px;transform-origin:0 0;background:var(--ground);overflow:hidden;
+#win{position:absolute;left:0;top:0;width:1120px;height:946px;transform-origin:0 0;background:var(--ground);overflow:hidden;
   box-shadow:0 8px 30px #0008;user-select:none;-webkit-user-select:none}
-.cheek{position:absolute;top:0;width:52px;height:800px}
+.cheek{position:absolute;top:0;width:52px;height:946px}
 .cheek.l{left:0}.cheek.r{right:0}
 #inner{position:absolute;left:52px;right:52px;top:0;bottom:0;display:flex;flex-direction:column;padding:8px 8px 4px;gap:8px}
 button,select,input{font:inherit;color:var(--text)}
@@ -83,6 +83,16 @@ button.chip:hover{border-color:var(--selb)}
 #meterCol h2{margin:0;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--title);text-align:center}
 #cvMeter{flex:1;min-height:0;width:100%;display:block}
 #pkRead{font:600 11px "JetBrains Mono",monospace;text-align:center;cursor:pointer;background:var(--display);border:1px solid var(--line);border-radius:3px;padding:1px 0}
+#tops{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;height:138px;flex:none}
+.slot{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:4px 6px;display:flex;flex-direction:column;gap:3px;min-width:0}
+.slot.drag{border-color:var(--selb);background:var(--sel)}
+.sh{display:flex;align-items:center;gap:4px}
+.sh b{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--title);white-space:nowrap}
+.sh select{flex:1;min-width:0;height:22px;background:var(--btn);border:1px solid var(--line);border-radius:4px;font-size:12px}
+.sh button{height:22px;padding:0 6px;font-size:12px}
+.slot canvas{display:block;width:100%;height:32px;flex:none;background:var(--display);border:1px solid var(--line);border-radius:3px}
+.sk{display:flex;justify-content:space-between}
+.knob.sm{width:44px}.knob.sm .kl{font-size:9px;height:11px;letter-spacing:.04em}.knob.sm svg{width:34px;height:34px}.knob.sm .kv{font-size:9px;height:12px}
 #keys{display:flex;gap:8px;height:84px;flex:none;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:5px 8px}
 #kctl{width:118px;flex:none;display:flex;flex-direction:column;gap:3px;justify-content:center}
 #kctl .row{display:flex;gap:4px;align-items:center}
@@ -191,10 +201,11 @@ button.chip:hover{border-color:var(--selb)}
       </aside>
     </div>
 
+    <div id="tops" aria-label="Layers and tops"></div>
     <div id="keys">
       <div id="kctl">
         <div class="row"><button id="oDn" aria-label="Octave down" data-tip="Move the keyboard one octave down. Key: Z.">Oct −</button><button id="oUp" aria-label="Octave up" data-tip="Move the keyboard one octave up. Key: X.">+</button></div>
-        <button id="ktBtn" class="on" data-tip="On: each key retunes the whole kick to that note, so you can play bass kicks and hear the tail on any note. Off: every key plays the same kick.">Key track</button>
+        <div class="row"><button id="kmS" data-tip="Same kick: every key plays exactly the kick you set, whatever key you press.">Same</button><button id="kmP" class="on" data-tip="Pitched: each key retunes the whole kick to that note, so it plays up or down the keyboard.">Pitched</button></div>
         <span class="chip" id="played">-</span>
       </div>
       <div id="piano" data-tip="Click the keys, or use your computer keyboard like Ableton Live: A S D F G H J K L ; ' are the white keys, W E T Y U O P the black keys. Z octave down, X octave up."></div>
@@ -219,10 +230,10 @@ button.chip:hover{border-color:var(--selb)}
 'use strict';
 const $=s=>document.querySelector(s);
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
-const W=1120,H=800;
+const W=1120,H=946;
 const NOTE=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 function hz2note(f){const n=12*Math.log2(f/440)+69,r=Math.round(n);return{name:NOTE[((r%12)+12)%12]+(Math.floor(r/12)-1),cents:(n-r)*100};}
-const KEYS=[['F#1',46.249],['G1',48.999],['G#1',51.913],['A1',55.0],['A#1',58.270],['B1',61.735]];
+const KEYS=[];for(let m=23;m<=39;m++)KEYS.push([NOTE[m%12]+(Math.floor(m/12)-1),440*Math.pow(2,(m-69)/12)]);
 
 /* ---------- parameters ---------- */
 const SPEC=[
@@ -243,10 +254,61 @@ const SPEC=[
  {id:'clip',label:'Clip',min:0,max:100,unit:' %',dec:0,def:20,tip:'Soft clipper at the end. More clip makes the kick denser and louder without going over 0 dB.'},
  {id:'out',label:'Output',min:-24,max:6,unit:' dB',dec:1,def:0,tip:'Output level in dB. Watch the meter on the right.'}
 ];
+const LK=[];
+for(let i=0;i<3;i++){const n='ABC'[i];
+  SPEC.push(
+   {id:`l${i}lvl`,label:'Level',min:0,max:100,unit:' %',dec:0,def:50,tip:`Loudness of layer ${n}.`},
+   {id:`l${i}pitch`,label:'Pitch',min:-24,max:24,unit:' st',dec:0,def:0,tip:`Pitch of layer ${n} in semitones. Built-in sounds move their tone or filter. Your own sound plays faster or slower.`},
+   {id:`l${i}start`,label:'Start',min:0,max:200,unit:' ms',dec:0,def:0,tip:'Skips this many ms at the start of your own sound, to cut silence or a soft attack. Only used for loaded sounds.'},
+   {id:`l${i}len`,label:'Len',min:2,max:400,log:1,unit:' ms',dec:0,def:12,tip:'How long the layer lasts. For built-in sounds it is the decay time. For your own sound it is the part that plays, with a short fade at the end.'},
+   {id:`l${i}delay`,label:'Delay',min:0,max:40,unit:' ms',dec:1,def:0,tip:'Starts the layer this many ms after the kick. Use it to line the top up with the body of the kick.'},
+   {id:`l${i}hp`,label:'HP',min:20,max:8000,log:1,unit:' Hz',dec:0,def:20,tip:'High-pass filter. Cuts the lows of the layer so it does not fight the sub. At 20 Hz it is off.'},
+   {id:`l${i}lp`,label:'LP',min:500,max:20000,log:1,unit:' Hz',dec:0,def:20000,tip:'Low-pass filter. Softens the highs of the layer. At 20 kHz it is off.'});
+  LK.push(`l${i}src`,`l${i}pol`);}
 const S={};SPEC.forEach(s=>S[s.id]=s);
-const P={pol:1};SPEC.forEach(s=>P[s.id]=s.def);
+const P={pol:1};SPEC.forEach(s=>P[s.id]=s.def);LK.forEach(k=>P[k]=k.endsWith('pol')?1:0);
 let bpm=138;
 
+/* ---------- layers ---------- */
+const SRCN=['Off','Click','Tick','Snap','Zap','Noise top','Ping','Sample'];
+const SRCLEN=[12,5,8,25,25,45,12,80];
+const SAMP=[null,null,null],SLOTMSG=['','',''];
+function bqMake(type,f,fs){const q=type==='bp'?1.2:0.7071,w=2*Math.PI*f/fs,c=Math.cos(w),sn=Math.sin(w),al=sn/(2*q);let b0,b1,b2;
+  if(type==='hp'){b0=(1+c)/2;b1=-(1+c);b2=(1+c)/2;}else if(type==='lp'){b0=(1-c)/2;b1=1-c;b2=(1-c)/2;}else{b0=al;b1=0;b2=-al;}
+  const a0=1+al;return{b0:b0/a0,b1:b1/a0,b2:b2/a0,a1:-2*c/a0,a2:(1-al)/a0,x1:0,x2:0,y1:0,y2:0};}
+function bqRun(f,v){const y=f.b0*v+f.b1*f.x1+f.b2*f.x2-f.a1*f.y1-f.a2*f.y2;f.x2=f.x1;f.x1=v;f.y2=f.y1;f.y1=isFinite(y)?y:0;return f.y1;}
+function genLayer(p,i,fs,N){
+  const k='l'+i,src=p[k+'src']|0;if(!src)return null;
+  const sm=SAMP[i];if(src===7&&!sm)return null;
+  const ratio=Math.pow(2,p[k+'pitch']/12),lenS=p[k+'len']/1000,tau=lenS/4.6;
+  const g=p[k+'lvl']/100*0.5*(p[k+'pol']<0?-1:1),i0=Math.floor(p[k+'delay']/1000*fs);
+  const out=new Float32Array(N);let seed=777+i*131;
+  const hpF=p[k+'hp']>21?bqMake('hp',Math.min(p[k+'hp'],fs*0.45),fs):null,lpF=p[k+'lp']<19500?bqMake('lp',Math.min(p[k+'lp'],fs*0.45),fs):null;
+  let nf=null,y1=0,x1=0,ph=0;
+  if(src===1)nf=bqMake('bp',Math.min(3500*ratio,fs*0.45),fs);else if(src===5)nf=bqMake('hp',Math.min(7000*ratio,fs*0.45),fs);
+  const hpA=src===3?Math.exp(-2*Math.PI*Math.min(1500*ratio,fs*0.4)/fs):0,startS=p[k+'start']/1000;
+  for(let j=i0;j<N;j++){
+    const t=(j-i0)/fs;let v=0;
+    if(src===7){
+      const pos=(startS+t*ratio)*sm.sr,ii=Math.floor(pos);
+      if(ii>=sm.data.length-1||t>=lenS)break;
+      const fr=pos-ii;v=sm.data[ii]*(1-fr)+sm.data[ii+1]*fr;
+      const rem=lenS-t;if(rem<0.005)v*=rem/0.005;
+    }else{
+      if(t>lenS*2)break;
+      const e=Math.exp(-t/tau);
+      if(src===1||src===3||src===5){seed=(seed*1664525+1013904223)>>>0;const n=seed/2147483648-1;
+        if(src===3){const hv=hpA*(y1+n-x1);x1=n;y1=hv;v=hv*e*(1+1.5*Math.exp(-t/(tau*0.15)))/2.5*1.6;}
+        else v=bqRun(nf,n)*e*(src===1?1.1:1.2);}
+      else if(src===2){ph+=2*Math.PI*Math.min(2400*ratio,fs*0.4)/fs;v=Math.sin(ph)*Math.exp(-t/(tau*0.5));}
+      else if(src===4){const f=700*ratio+7300*ratio*Math.exp(-t/(lenS/6));ph+=2*Math.PI*Math.min(f,fs*0.4)/fs;v=Math.sin(ph)*e;}
+      else if(src===6){ph+=2*Math.PI*Math.min(1500*ratio,fs*0.4)/fs;v=Math.sin(ph)*e;}
+    }
+    if(hpF)v=bqRun(hpF,v);if(lpF)v=bqRun(lpF,v);
+    out[j]=v*g;
+  }
+  return out;
+}
 /* ---------- engine: offline render at 4x, decimate ---------- */
 const OS=4;
 function renderKick(p,sr){
@@ -267,10 +329,10 @@ function renderKick(p,sr){
     const n=seed/2147483648-1;
     const bp=b0*n+b2*x2-a1*y1-a2*y2;x2=x1;x1=n;y2=y1;y1=bp;
     const click=t<tauC*8?bp*Math.exp(-t/tauC):0;
-    let v=0.5*(tone+cl*click);
-    const rem=len-t;if(rem<0.01)v*=rem/0.01;
-    x[i]=v;
+    x[i]=0.5*(tone+cl*click);
   }
+  for(let i=0;i<3;i++){const L=genLayer(p,i,fs,N);if(L)for(let q=0;q<N;q++)x[q]+=L[q];}
+  {const fl=Math.floor(0.01*fs);for(let q=Math.max(0,N-fl);q<N;q++)x[q]*=(N-q)/fl;}
   // colour stages (Purr Trio) with closed-loop RMS match
   const dr=p.drive/100,tr=p.trans/100,fz=p.fuzz/100,any=dr>0||tr>0||fz>0;
   if(any){
@@ -383,15 +445,16 @@ function v2n(s,v){return s.log?Math.log(v/s.min)/Math.log(s.max/s.min):(v-s.min)
 function fmt(s,v){return v.toFixed(s.dec)+s.unit;}
 function arc(r,a0,a1){const p=a=>[r*Math.sin(a*Math.PI/180),-r*Math.cos(a*Math.PI/180)];
   const[a,b]=[p(a0),p(a1)];return`M${a[0].toFixed(2)} ${a[1].toFixed(2)} A${r} ${r} 0 ${a1-a0>180?1:0} 1 ${b[0].toFixed(2)} ${b[1].toFixed(2)}`;}
-function mkKnob(parent,id){
-  const s=S[id],el=document.createElement('div');el.className='knob';el.tabIndex=0;el.setAttribute('role','slider');
+function fmtSm(s,v){const u=s.unit.trim();let n=Math.abs(v)>=1000?(v/1000).toFixed(1)+'k':v.toFixed(s.dec);if(v>0&&u==='st')n='+'+n;return n+(u==='ms'||u==='st'?u:'');}
+function mkKnob(parent,id,sm){
+  const s=S[id],el=document.createElement('div');el.className='knob'+(sm?' sm':'');el.tabIndex=0;el.setAttribute('role','slider');
   el.setAttribute('aria-label',s.label);el.dataset.tip=s.tip;
   el.innerHTML=`<div class="kl">${s.label}</div><svg viewBox="-24 -24 48 48"><path class="ktrack" d="${arc(19,-135,135)}"/><path class="kval"/><line class="kptr" x1="0" y1="0" x2="0" y2="-13"/></svg><div class="kv"></div>`;
   parent.appendChild(el);
   const kval=el.querySelector('.kval'),kptr=el.querySelector('.kptr'),kv=el.querySelector('.kv');
   function ui(){const n=clamp(v2n(s,P[id]),0,1),a=-135+270*n;
     kval.setAttribute('d',n<0.005?'':arc(19,-135,a));kptr.setAttribute('transform',`rotate(${a})`);
-    kv.textContent=fmt(s,P[id]);el.setAttribute('aria-valuenow',P[id].toFixed(s.dec));}
+    kv.textContent=sm?fmtSm(s,P[id]):fmt(s,P[id]);el.setAttribute('aria-valuenow',P[id].toFixed(s.dec));}
   let y0=0,n0=0;
   el.addEventListener('pointerdown',e=>{el.setPointerCapture(e.pointerId);y0=e.clientY;n0=v2n(s,P[id]);el.focus();});
   el.addEventListener('pointermove',e=>{if(!el.hasPointerCapture(e.pointerId))return;
@@ -417,7 +480,7 @@ keyChip.dataset.tip='Click to snap Tail to the exact note shown (0 ct). Example:
 keyChip.addEventListener('click',()=>{const m=Math.round(12*Math.log2(P.tailHz/440)+69);set('tailHz',440*Math.pow(2,(m-69)/12));});
 function syncKey(){
   let m='';for(const k of KEYS)if(Math.abs(Math.log2(P.tailHz/k[1]))*1200<1)m=String(k[1]);
-  keySel.value=m;const n=hz2note(P.tailHz);keyChip.textContent=`${n.name} ${n.cents>=0?'+':''}${n.cents.toFixed(0)} ct`;
+  keySel.value=m;const n=hz2note(P.tailHz);const cr=Math.round(n.cents);keyChip.textContent=`${n.name} ${cr>=0?'+':''}${cr} ct`;
 }
 {
   const c=$('#ctlPitch'),g=group(c,'Tuning');
@@ -437,6 +500,47 @@ function syncKey(){
   const pk=document.createElement('div');pk.className='cell';pk.innerHTML='<div class="kl">Render peak</div><span class="chip" id="rpk">-</span>';g8.appendChild(pk);
 }
 syncKey();
+/* layers UI */
+const slotEls=[];
+function setSrc(i,v,gesture){P[`l${i}src`]=v;if(gesture&&v>0)set(`l${i}len`,SRCLEN[v]);slotRefresh(i);dirty=true;presetEdited();}
+function slotRefresh(i){const e=slotEls[i];if(!e)return;e.sel.value=String(P[`l${i}src`]);e.pl.classList.toggle('on',P[`l${i}pol`]<0);
+  e.sk.children[2].style.opacity=P[`l${i}src`]===7?1:0.35;}
+async function loadFile(i,f){
+  const msg=t=>{SLOTMSG[i]=t;dirty=true;};
+  if(!f)return;if(!ctx){msg('Audio is not available here.');return;}
+  if(f.size>12e6){msg('File too big. Maximum is 12 MB.');return;}
+  try{
+    const au=await ctx.decodeAudioData(await f.arrayBuffer());
+    const n=Math.min(au.length,Math.floor(3*au.sampleRate)),d=new Float32Array(n);
+    for(let c=0;c<au.numberOfChannels;c++){const ch=au.getChannelData(c);for(let k=0;k<n;k++)d[k]+=ch[k]/au.numberOfChannels;}
+    let pk=0;for(let k=0;k<n;k++)pk=Math.max(pk,Math.abs(d[k]));
+    if(pk<1e-6){msg('This file is silent.');return;}
+    for(let k=0;k<n;k++)d[k]*=0.9/pk;
+    SAMP[i]={name:f.name.replace(/[^\w .()-]/g,'').slice(0,40)||'sound',data:d,sr:au.sampleRate};SLOTMSG[i]='';
+    P[`l${i}src`]=7;set(`l${i}len`,clamp(n/au.sampleRate*1000,2,400));set(`l${i}start`,0);slotRefresh(i);dirty=true;
+  }catch(e){msg('Could not read this file. Try wav, flac, mp3 or ogg.');}
+}
+(function(){
+  const host=$('#tops');
+  'ABC'.split('').forEach((nm,i)=>{
+    const sec=document.createElement('section');sec.className='slot';
+    sec.innerHTML=`<div class="sh"><b>Layer ${nm}</b><select aria-label="Layer ${nm} sound" data-tip="Pick a built-in click, attack or top, or Sample for your own sound."></select><button class="ld" data-tip="Load your own sound (wav, flac, mp3 or ogg, up to 3 seconds). You can also drop a file on this layer.">Load</button><button class="pl" data-tip="Flip the polarity of this layer.">Ø</button></div><canvas id="lw${i}" aria-label="Layer ${nm} shape"></canvas><div class="sk"></div><input type="file" accept="audio/*" hidden aria-label="Load sound for layer ${nm}">`;
+    host.appendChild(sec);
+    const sel=sec.querySelector('select'),sk=sec.querySelector('.sk'),fi=sec.querySelector('input');
+    sel.innerHTML=SRCN.map((n,j)=>`<option value="${j}">${n}</option>`).join('');
+    ['lvl','pitch','start','len','delay','hp','lp'].forEach(x=>mkKnob(sk,`l${i}${x}`,true));
+    slotEls[i]={sel,sk,pl:sec.querySelector('.pl'),sec};
+    sel.addEventListener('change',()=>{const v=+sel.value;setSrc(i,v,true);if(v===7&&!SAMP[i])fi.click();});
+    sec.querySelector('.ld').addEventListener('click',()=>fi.click());
+    fi.addEventListener('change',()=>{loadFile(i,fi.files[0]);fi.value='';});
+    slotEls[i].pl.addEventListener('click',()=>{P[`l${i}pol`]*=-1;slotRefresh(i);dirty=true;presetEdited();});
+    sec.addEventListener('dragover',e=>{e.preventDefault();sec.classList.add('drag');});
+    sec.addEventListener('dragleave',()=>sec.classList.remove('drag'));
+    sec.addEventListener('drop',e=>{e.preventDefault();sec.classList.remove('drag');const f=e.dataTransfer&&e.dataTransfer.files[0];if(f)loadFile(i,f);});
+    slotRefresh(i);
+  });
+  ['dragover','drop'].forEach(ev=>document.addEventListener(ev,e=>e.preventDefault()));
+})();
 
 /* ---------- looks / theme tokens ---------- */
 let CSS={};
@@ -447,7 +551,7 @@ function setLook(l){document.documentElement.dataset.look=l==='C'?'':l;if(l==='C
 
 /* ---------- canvases / scaling ---------- */
 let scale=1,defScale=1;
-const cvs=['cvPitch','cvSpec','cvWave','cvGap','cvMeter','cheekL','cheekR'].map(i=>document.getElementById(i));
+const cvs=['cvPitch','cvSpec','cvWave','cvGap','cvMeter','lw0','lw1','lw2','cheekL','cheekR'].map(i=>document.getElementById(i));
 function sizeCanvas(c){
   const isCheek=c.classList.contains('cheek');
   const w=isCheek?52:c.offsetWidth,h=isCheek?H:c.offsetHeight,k=scale*(window.devicePixelRatio||1);
@@ -582,6 +686,23 @@ function drawSpec(){
   const xt=FX(P.tailHz);g.strokeStyle=CSS.curve2;g.setLineDash([4,3]);g.beginPath();g.moveTo(xt,t);g.lineTo(xt,b);g.stroke();g.setLineDash([]);
   const nn=hz2note(P.tailHz);txt(g,`${nn.name} ${P.tailHz.toFixed(1)}`,xt+4,t+10,CSS.curve2,'left');
 }
+function drawLayers(){
+  for(let i=0;i<3;i++){
+    const c=$('#lw'+i);if(!c._g)continue;const g=clearC(c),w=c._w,h=c._h,src=P[`l${i}src`];
+    g.strokeStyle=CSS.grid;g.beginPath();g.moveTo(0,h/2);g.lineTo(w,h/2);g.stroke();
+    txt(g,'100 ms',w-4,h-3,CSS.cap,'right','9px "JetBrains Mono",monospace');
+    if(SLOTMSG[i]){txt(g,SLOTMSG[i],6,h/2+3,CSS['m-clip'],'left','10px "JetBrains Mono",monospace');continue;}
+    if(!src){txt(g,'Off',6,h/2+3,CSS.cap,'left','10px "JetBrains Mono",monospace');continue;}
+    if(src===7&&!SAMP[i]){txt(g,'Drop a sound here, or click Load',6,h/2+3,CSS.cap,'left','10px "JetBrains Mono",monospace');continue;}
+    const N=Math.floor(0.1*sr),L=genLayer(P,i,sr,N);if(!L)continue;
+    let pkL=0;for(let q=0;q<N;q++)pkL=Math.max(pkL,Math.abs(L[q]));const sc=pkL>0?0.42*h/pkL:0;
+    g.fillStyle=CSS.fill;g.globalAlpha=.9;
+    for(let x=0;x<w;x++){let mn=0,mx=0;const a=Math.floor(x/w*N),b=Math.floor((x+1)/w*N)+1;for(let q=a;q<b&&q<N;q++){const v=L[q];if(v<mn)mn=v;if(v>mx)mx=v;}
+      g.fillRect(x,h/2-mx*sc,1,Math.max(1,(mx-mn)*sc));}
+    g.globalAlpha=1;
+    if(src===7&&SAMP[i])txt(g,SAMP[i].name,6,10,CSS.read,'left','10px "JetBrains Mono",monospace');
+  }
+}
 function drawGap(){
   const c=$('#cvGap'),g=clearC(c),l=10,r=c._w-10,beat=60000/bpm,Xp=ms=>l+ms/beat*(r-l);
   const y0=26,hh=c._h-52;
@@ -623,10 +744,10 @@ function refresh(){
   const t0=performance.now();
   noteCache={};buf=renderKick(P,sr);mags=spectrumDb(buf,sr);
   if(ctx){const ab=ctx.createBuffer(1,buf.length,sr);ab.copyToChannel(buf,0);curBuf=ab;}
-  updateChips();drawPitch();drawWave();drawSpec();drawGap();
+  updateChips();drawPitch();drawWave();drawSpec();drawGap();drawLayers();
   window.__renderMs=performance.now()-t0;
 }
-function redrawAll(){if(buf.length>1){drawPitch();drawWave();drawSpec();drawGap();drawMeter();}}
+function redrawAll(){if(buf.length>1){drawPitch();drawWave();drawSpec();drawGap();drawLayers();drawMeter();}}
 
 /* ---------- main loop (paused when hidden) ---------- */
 let visible=true;
@@ -693,17 +814,18 @@ $('#piano').addEventListener('pointermove',e=>{if(!ptr)return;const el=document.
   if(k&&k.dataset.m!==$('#piano')._last){$('#piano')._last=k.dataset.m;noteOn(+k.dataset.m);}});
 $('#piano').addEventListener('pointerup',()=>{ptr=false;$('#piano')._last=null;});
 $('#oDn').onclick=()=>setBase(baseMidi-12);$('#oUp').onclick=()=>setBase(baseMidi+12);
-$('#ktBtn').onclick=()=>{keyTrack=!keyTrack;$('#ktBtn').classList.toggle('on',keyTrack);};
+function setKM(on){keyTrack=on;$('#kmP').classList.toggle('on',on);$('#kmS').classList.toggle('on',!on);}
+$('#kmP').onclick=()=>setKM(true);$('#kmS').onclick=()=>setKM(false);
 
 /* ---------- presets ---------- */
 const mk=(name,tag,o)=>({name,tag,p:Object.assign({},o)});
-const D=()=>{const o={};SPEC.forEach(s=>o[s.id]=s.def);return o;};
+const D=()=>{const o={};SPEC.forEach(s=>o[s.id]=s.def);LK.forEach(k=>o[k]=k.endsWith('pol')?1:0);return o;};
 const FACTORY=[
  mk('Uplifting 138','uplifting',D()),
  mk('Dark Rolling','dark',Object.assign(D(),{tailHz:48.999,startHz:700,sweep:35,curve:1.1,clickLvl:35,clickFreq:2500,clickLen:3,body:70,sub:100,hold:14,decay:160,drive:25,trans:20,fuzz:0,clip:20})),
- mk('Punchy Click','punchy',Object.assign(D(),{tailHz:55,startHz:1000,sweep:24,curve:0.9,clickLvl:80,clickFreq:4500,clickLen:5,body:100,sub:70,hold:10,decay:120,drive:20,trans:10,fuzz:5,clip:30})),
+ mk('Punchy Click','punchy',Object.assign(D(),{tailHz:55,startHz:1000,sweep:24,curve:0.9,clickLvl:80,clickFreq:4500,clickLen:5,body:100,sub:70,hold:10,decay:120,drive:20,trans:10,fuzz:5,clip:30,l0src:3,l0lvl:35,l0len:20,l0hp:2000})),
  mk('Subby Deep','sub',Object.assign(D(),{tailHz:46.249,startHz:600,sweep:40,curve:1.3,clickLvl:25,clickFreq:2000,clickLen:3,body:55,sub:100,hold:15,decay:190,drive:8,trans:0,fuzz:0,clip:10})),
- mk('Hard Dance','hard',Object.assign(D(),{tailHz:61.735,startHz:1200,sweep:22,curve:0.8,clickLvl:90,clickFreq:5000,clickLen:6,body:100,sub:80,hold:10,decay:110,drive:45,trans:30,fuzz:20,clip:55})),
+ mk('Hard Dance','hard',Object.assign(D(),{tailHz:61.735,startHz:1200,sweep:22,curve:0.8,clickLvl:90,clickFreq:5000,clickLen:6,body:100,sub:80,hold:10,decay:110,drive:45,trans:30,fuzz:20,clip:55,l0src:4,l0lvl:30,l0len:20,l0hp:1500,l1src:5,l1lvl:25,l1len:30,l1hp:6000,l1delay:2})),
  mk('Init','init',D())
 ];
 let user=[];try{user=JSON.parse(localStorage.getItem('kk-user')||'[]');}catch(e){user=[];}
@@ -713,13 +835,14 @@ const all=()=>FACTORY.map((p,i)=>({p,list:'f',i})).concat(user.map((p,i)=>({p,li
 function saveUser(){try{localStorage.setItem('kk-user',JSON.stringify(user));}catch(e){}}
 function getCur(){return cur.list==='f'?FACTORY[cur.i]:user[cur.i];}
 function load(pr){SPEC.forEach(s=>{if(typeof pr.p[s.id]==='number')P[s.id]=clamp(pr.p[s.id],s.min,s.max);});P.pol=pr.p.pol===-1?-1:1;
-  SPEC.forEach(s=>knobs[s.id]&&knobs[s.id].ui());syncKey();dirty=true;edited=false;nameUi();}
+  LK.forEach(k=>{const v=pr.p[k];P[k]=k.endsWith('pol')?(v===-1?-1:1):(Number.isInteger(v)&&v>=0&&v<=7?v:0);});
+  SPEC.forEach(s=>knobs[s.id]&&knobs[s.id].ui());slotEls.forEach((e,i)=>slotRefresh(i));syncKey();dirty=true;edited=false;nameUi();}
 function nameUi(){const c=getCur();$('#pName').textContent=(c?c.name:'')+(edited?' *':'');
   $('#pRename').disabled=$('#pDel').disabled=cur.list==='f';}
 function presetEdited(){if(!edited){edited=true;nameUi();}}
 function step(d){const a=all(),k=a.findIndex(x=>x.list===cur.list&&x.i===cur.i),n=a[(k+d+a.length)%a.length];cur={list:n.list,i:n.i};load(n.p);}
 $('#pPrev').onclick=()=>step(-1);$('#pNext').onclick=()=>step(1);
-function snapshot(name,tag){const p={};SPEC.forEach(s=>p[s.id]=+P[s.id].toFixed(4));p.pol=P.pol;return{name,tag:tag||'mine',p};}
+function snapshot(name,tag){const p={};SPEC.forEach(s=>p[s.id]=+P[s.id].toFixed(4));p.pol=P.pol;LK.forEach(k=>p[k]=P[k]);return{name,tag:tag||'mine',p};}
 
 /* dialogs */
 const back=$('#dlgBack'),dlg=$('#dlg');
@@ -770,7 +893,7 @@ $('#pImp').onclick=()=>{openDlg(`<h3>Import</h3><p>Paste shared sound text. Unkn
     if(!o||o.kickKitten!==1||typeof o.p!=='object'||o.p===null){d.querySelector('#er').textContent='This is not a Kick Kitten sound.';return;}
     const p={};let n=0;SPEC.forEach(s=>{if(typeof o.p[s.id]==='number'&&isFinite(o.p[s.id])){p[s.id]=clamp(o.p[s.id],s.min,s.max);n++;}});
     if(!n){d.querySelector('#er').textContent='No usable values found.';return;}
-    p.pol=o.p.pol===-1?-1:1;const full=Object.assign(D(),p);
+    p.pol=o.p.pol===-1?-1:1;LK.forEach(k=>{const v=o.p[k];if(k.endsWith('pol'))p[k]=v===-1?-1:1;else p[k]=(Number.isInteger(v)&&v>=0&&v<=7)?v:0;});const full=Object.assign(D(),p);
     const nm=String(o.name||'Imported').replace(/[^\w .#()+-]/g,'').trim().slice(0,40)||'Imported';
     user.push({name:nm,tag:'imported',p:full});saveUser();cur={list:'u',i:user.length-1};load(user[cur.i]);closeDlg();};});};
 $('#bGuide').onclick=()=>openDlg(`<h3>Guide</h3><ul>
@@ -779,7 +902,8 @@ $('#bGuide').onclick=()=>openDlg(`<h3>Guide</h3><ul>
 <li>Pick the Key of your song. The tail pitch snaps to its note.</li>
 <li>The orange line on the waveform is where the kick ends. The purple line is one 16th note at your tempo.</li>
 <li>Space: hit the kick as set. Left and right arrows: previous and next preset.</li>
-<li>Keys work like Ableton Live: A S D F G H J K L ; ' are white keys, W E T Y U O P are black keys, Z octave down, X octave up. Key track retunes the kick to the note you press.</li>
+<li>Keys work like Ableton Live: A S D F G H J K L ; ' are white keys, W E T Y U O P are black keys, Z octave down, X octave up. Same plays the identical kick on every key. Pitched retunes the kick to the note you press, so it plays up or down.</li>
+<li>Layers A, B and C add clicks, attacks and tops on top of the kick. Pick a built-in sound, or drop your own sound file on a layer, or press Load. Level, Pitch, Start, Len, Delay, HP and LP shape each one.</li>
 <li>Click the note chip under Key (for example F1 +45 ct) to snap Tail to exactly that note.</li>
 <li>Zoom with the buttons, drag any edge or corner, or double click a wood side to return to 100%.</li></ul><div class="btns"><button id="x" class="on">Close</button></div>`,d=>d.querySelector('#x').onclick=closeDlg);
 $('#bSet').onclick=()=>openDlg(`<h3>Settings</h3>
