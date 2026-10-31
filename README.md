@@ -25,3 +25,7 @@ The Sauce panel runs a chain inside the render: band split (sub below 110 Hz, bo
 - Waveform panel: Export .wav (24-bit mono) and drag the waveform straight into a DAW or folder (Chromium browsers; the real plugin will use native drag).
 - Pitch envelope: every dot moves on its own, in any direction, including the first and last; the first dot can also move right.
 - Window is now 1640 x 946.
+
+## v1.13
+- Render tab (next to Glue & limiter): Key, Vel, Generate, Export .wav, and a draggable waveform of the whole kick. Shows "out of date" when you change a knob after generating.
+- Layer Start knob is now 0 to 40 ms with 0.1 ms steps (was 0 to 200 ms), so you can trim the start of clicks precisely.

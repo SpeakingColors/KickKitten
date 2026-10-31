@@ -93,7 +93,19 @@ button.chip:hover{border-color:var(--selb)}
 #pGlue h2 small{display:block;margin:2px 0 0;line-height:1.25}
 #pGlue canvas#cvGlue{flex:none;height:178px}
 #limBtn.on{background:var(--curve);color:var(--ground)}
-#cvWave{cursor:grab}
+#cvWave,#cvRender{cursor:grab}
+.tabs{display:flex;gap:4px;margin:0 0 6px}
+.tabs button{flex:1;height:26px;font-size:12px;letter-spacing:.1em;text-transform:uppercase}
+.tabs button.on{background:var(--curve);color:var(--ground)}
+#renderView{display:flex;flex-direction:column;gap:8px;flex:1;min-height:0}
+#renderView[hidden],#glueView[hidden]{display:none}
+#glueView{display:flex;flex-direction:column;flex:1;min-height:0;justify-content:space-around}
+#renderView canvas#cvRender{flex:none;height:210px}
+#renderView .rrow{display:flex;gap:8px;align-items:center;justify-content:space-between}
+#renderView .rrow label{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--cap)}
+#renderView select,#renderView input{background:var(--display);border:1px solid var(--line);border-radius:4px;height:26px;width:96px;color:var(--read);font:600 12px "JetBrains Mono",monospace;padding:0 6px}
+#renderView button.big{height:30px;font-size:13px;letter-spacing:.1em;text-transform:uppercase}
+#renderView p{margin:0;font-size:11px;color:var(--cap);line-height:1.35}
 #tops{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;height:138px;flex:none}
 .slot{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:4px 6px;display:flex;flex-direction:column;gap:3px;min-width:0}
 .slot.drag{border-color:var(--selb);background:var(--sel)}
@@ -221,11 +233,24 @@ button.chip:hover{border-color:var(--selb)}
         <div class="ctl" id="ctlOut"></div>
       </section>
     <section class="panel" id="pGlue">
-      <h2>Glue &amp; limiter <small>A compressor blended under the kick, then an optional limiter. Watch the meter.</small></h2>
+      <div class="tabs"><button id="tabGlue" class="on" data-tip="Glue compressor and limiter.">Glue &amp; limiter</button><button id="tabRender" data-tip="Render the finished kick, see all of it, save it as a .wav or drag it into your DAW.">Render</button></div>
+      <div id="glueView">
+      <h2 style="margin:0">Glue &amp; limiter <small>A compressor blended under the kick, then an optional limiter.</small></h2>
       <div class="ctl" id="ctlGlue1"></div><div class="ctl" id="ctlGlue2"></div>
       <canvas id="cvGlue" aria-label="Glue compressor meter: level and gain reduction in dB over time"></canvas>
       <div class="chips" id="glueChips"><span class="chip" id="gPk" data-tip="Peak level of the kick going into the glue compressor, in dB.">Peak -</span><span class="chip" id="gGr" data-tip="Most gain reduction the glue compressor applied, in dB.">GR -</span></div>
       <div class="ctl" id="ctlGlue3"></div>
+      </div>
+      <div id="renderView" hidden>
+        <h2 style="margin:0">Render <small>The whole kick, ready to save</small></h2>
+        <canvas id="cvRender" draggable="true" aria-label="Rendered kick waveform. Drag it into your DAW to drop the kick as a .wav file." data-tip="The rendered kick. Drag this waveform into your DAW or a folder to drop it as a .wav file."></canvas>
+        <div class="chips"><span class="chip" id="rInfo">not rendered</span><span class="chip" id="rStale" hidden>out of date, press Generate</span></div>
+        <div class="rrow"><label for="rKey">Key</label><select id="rKey" data-tip="The note the kick is rendered at. Current uses your Tail note."></select></div>
+        <div class="rrow"><label for="rVel">Vel</label><input id="rVel" type="number" min="1" max="127" step="1" value="127" data-tip="Velocity from 1 to 127. 127 is full level, lower is quieter."></div>
+        <button class="big" id="rGen" data-tip="Render the kick now at this key and velocity.">Generate</button>
+        <button class="big" id="rExp" data-tip="Save the rendered kick as a 24-bit mono .wav file.">Export .wav</button>
+        <p>Generate, then Export, or drag the waveform straight into your DAW. Inside this web preview the export arrives zipped.</p>
+      </div>
     </section>
     <section class="panel" id="pSauce">
       <h2>Sauce <small>Weight, punch, crack and loudness that make trance kicks hit hard. Amount 0 is off.</small></h2>
@@ -312,7 +337,7 @@ for(let i=0;i<3;i++){const n='ABC'[i];
   SPEC.push(
    {id:`l${i}lvl`,label:'Level',min:0,max:100,unit:' %',dec:0,def:70,tip:`Loudness of layer ${n}.`},
    {id:`l${i}pitch`,label:'Pitch',min:-24,max:24,unit:' st',dec:0,def:0,tip:`Pitch of layer ${n} in semitones. Built-in sounds move their tone or filter. Your own sound plays faster or slower.`},
-   {id:`l${i}start`,label:'Start',min:0,max:200,unit:' ms',dec:0,def:0,tip:'Skips this many ms at the start of your own sound, to cut silence or a soft attack. Only used for loaded sounds.'},
+   {id:`l${i}start`,label:'Start',min:0,max:40,unit:' ms',dec:1,def:0,tip:'Trims the first ms off a sound, to cut silence or a soft attack. Fine range 0 to 40 ms; hold Shift while dragging for even finer steps.'},
    {id:`l${i}len`,label:'Len',min:2,max:800,log:1,unit:' ms',dec:0,def:40,tip:'How long the layer lasts. For built-in sounds it is the decay time. For your own sound it is the part that plays, with a short fade at the end.'},
    {id:`l${i}delay`,label:'Delay',min:0,max:40,unit:' ms',dec:1,def:0,tip:'Starts the layer this many ms after the kick. Use it to line the top up with the body of the kick.'},
    {id:`l${i}hp`,label:'HP',min:20,max:8000,log:1,unit:' Hz',dec:0,def:20,tip:'High-pass filter. Cuts the lows of the layer so it does not fight the sub. At 20 Hz it is off.'},
@@ -809,7 +834,7 @@ function setLook(l){document.documentElement.dataset.look=l==='C'?'':l;if(l==='C
 
 /* ---------- canvases / scaling ---------- */
 let scale=1,defScale=1;
-const cvs=['cvPitch','cvSpec','cvWave','cvGap','cvMeter','cvGlue','lw0','lw1','lw2','cheekL','cheekR'].map(i=>document.getElementById(i));
+const cvs=['cvPitch','cvSpec','cvWave','cvGap','cvMeter','cvGlue','cvRender','lw0','lw1','lw2','cheekL','cheekR'].map(i=>document.getElementById(i));
 function sizeCanvas(c){
   const isCheek=c.classList.contains('cheek');
   const w=isCheek?52:c.offsetWidth,h=isCheek?H:c.offsetHeight,k=scale*(window.devicePixelRatio||1);
@@ -935,22 +960,48 @@ let drag=null;
 })();
 
 /* ---------- export: 24-bit mono wav, save button and drag into the DAW ---------- */
-function wavBlob(){
-  const n=buf.length,bytes=new ArrayBuffer(44+n*3),v=new DataView(bytes),w=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i));};
+function wavBlob(src){
+  src=src||buf;const n=src.length,bytes=new ArrayBuffer(44+n*3),v=new DataView(bytes),w=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i));};
   w(0,'RIFF');v.setUint32(4,36+n*3,true);w(8,'WAVEfmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,sr,true);v.setUint32(28,sr*3,true);v.setUint16(32,3,true);v.setUint16(34,24,true);w(36,'data');v.setUint32(40,n*3,true);
-  for(let i=0;i<n;i++){let s=Math.round(clamp(buf[i],-1,1)*8388607);if(s<0)s+=16777216;const o=44+i*3;v.setUint8(o,s&255);v.setUint8(o+1,(s>>8)&255);v.setUint8(o+2,(s>>16)&255);}
+  for(let i=0;i<n;i++){let s=Math.round(clamp(src[i],-1,1)*8388607);if(s<0)s+=16777216;const o=44+i*3;v.setUint8(o,s&255);v.setUint8(o+1,(s>>8)&255);v.setUint8(o+2,(s>>16)&255);}
   return new Blob([bytes],{type:'audio/wav'});}
-function wavName(){const c=getCur();const nm=((c?c.name:'Kick').replace(/[^A-Za-z0-9 #-]/g,'').trim().replace(/\s+/g,'_'))||'Kick';return `KickKitten_${nm}_${hz2note(P.tailHz).name.replace('#','s')}.wav`;}
+function wavName(hz){hz=hz||P.tailHz;const c=getCur();const nm=((c?c.name:'Kick').replace(/[^A-Za-z0-9 #-]/g,'').trim().replace(/\s+/g,'_'))||'Kick';return `KickKitten_${nm}_${hz2note(hz).name.replace('#','s')}.wav`;}
 function zipOne(name,u8){const enc=new TextEncoder().encode(name);let c,tb=[];for(let n=0;n<256;n++){c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;tb[n]=c>>>0;}
   let crc=0xFFFFFFFF;for(let i=0;i<u8.length;i++)crc=tb[(crc^u8[i])&255]^(crc>>>8);crc=(crc^0xFFFFFFFF)>>>0;
   const L=30+enc.length,C=46+enc.length,out=new Uint8Array(L+u8.length+C+22),v=new DataView(out.buffer);
   v.setUint32(0,0x04034b50,true);v.setUint16(4,20,true);v.setUint32(14,crc,true);v.setUint32(18,u8.length,true);v.setUint32(22,u8.length,true);v.setUint16(26,enc.length,true);out.set(enc,30);out.set(u8,L);
   let o=L+u8.length;v.setUint32(o,0x02014b50,true);v.setUint16(o+4,20,true);v.setUint16(o+6,20,true);v.setUint32(o+16,crc,true);v.setUint32(o+20,u8.length,true);v.setUint32(o+24,u8.length,true);v.setUint16(o+28,enc.length,true);out.set(enc,o+46);
   o+=C;v.setUint32(o,0x06054b50,true);v.setUint16(o+8,1,true);v.setUint16(o+10,1,true);v.setUint32(o+12,C,true);v.setUint32(o+16,L+u8.length,true);return out;}
-$('#expBtn').addEventListener('click',async()=>{if(dirty){dirty=false;refresh();}$('#expBtn').blur();const bl=wavBlob(),nm=wavName();
-  let dl=null;try{if(window.claude&&claude.use)dl=await claude.use('downloads');}catch(_){}
+async function expFile(bl,nm){let dl=null;try{if(window.claude&&claude.use)dl=await claude.use('downloads');}catch(_){}
   if(dl){try{const z=zipOne(nm,new Uint8Array(await bl.arrayBuffer()));await dl.save({filename:nm.replace(/\.wav$/,'.zip'),data:z});}catch(_){}return;}
-  const u=URL.createObjectURL(bl),a=document.createElement('a');a.href=u;a.download=nm;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);});
+  const u=URL.createObjectURL(bl),a=document.createElement('a');a.href=u;a.download=nm;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);}
+$('#expBtn').addEventListener('click',()=>{if(dirty){dirty=false;refresh();}$('#expBtn').blur();expFile(wavBlob(),wavName());});
+/* ---------- render tab: generate at a key and velocity, show it whole, export or drag ---------- */
+let REN=null;
+(function(){
+  const sel=$('#rKey');sel.innerHTML='<option value="">Current</option>';for(let m=24;m<=60;m++)sel.innerHTML+=`<option value="${m}">${NOTE[m%12]+(Math.floor(m/12)-1)}</option>`;
+  function show(on){$('#glueView').hidden=on;$('#renderView').hidden=!on;$('#tabGlue').classList.toggle('on',!on);$('#tabRender').classList.toggle('on',on);
+    if(on){sizeCanvas($('#cvRender'));if(!REN)gen();else drawRen();}else{sizeCanvas($('#cvGlue'));drawGlue();}}
+  $('#tabGlue').onclick=()=>{show(false);$('#tabGlue').blur();};$('#tabRender').onclick=()=>{show(true);$('#tabRender').blur();};
+  function gen(){if(dirty){dirty=false;refresh();}
+    const m=sel.value?+sel.value:null,vel=clamp(+$('#rVel').value||127,1,127);let q=P;
+    if(m!==null){const f=440*Math.pow(2,(m-69)/12);q=Object.assign({},P,{tailHz:f,startHz:P.startHz*f/P.tailHz});if(P.env)q.env=P.env.map(a=>[a[0],a[1]*f/P.tailHz,a[2]]);}
+    const x=Float32Array.from(renderKick(q,sr));const g=vel/127;for(let i=0;i<x.length;i++)x[i]*=g;
+    REN={x,hz:q.tailHz,sig:JSON.stringify(P)};drawRen();}
+  window.drawRen=function drawRen(){const c=$('#cvRender');if(!c||!c._w||!REN||$('#renderView').hidden)return;const g=clearC(c),l=36,r=c._w-8,t=10,b=c._h-18,mid=(t+b)/2,n=REN.x.length;
+    g.lineWidth=1;g.strokeStyle=CSS.grid;[[1,'0'],[.5,'-6'],[0,'-inf'],[-.5,'-6'],[-1,'0']].forEach(([a,s])=>{const y=mid-a*(b-t)/2;g.beginPath();g.moveTo(l,y);g.lineTo(r,y);g.stroke();txt(g,s,l-4,y+3,CSS.cap,'right');});
+    const ms=n/sr*1000,step=ms>400?100:50;for(let k=0;k<=ms;k+=step){const x=l+k/ms*(r-l);g.beginPath();g.moveTo(x,t);g.lineTo(x,b);g.stroke();txt(g,k,x,b+11,CSS.cap,'center');}
+    txt(g,'ms',l-4,b+11,CSS.cap,'right');
+    g.fillStyle=CSS.curve;g.beginPath();const W=r-l;for(let px=0;px<W;px++){const i0=Math.floor(px/W*n),i1=Math.max(i0+1,Math.floor((px+1)/W*n));let mx=-1,mn=1;for(let i=i0;i<i1&&i<n;i++){const v=REN.x[i];if(v>mx)mx=v;if(v<mn)mn=v;}
+      const y1=mid-mx*(b-t)/2,y2=mid-mn*(b-t)/2;g.fillRect(l+px,y1,1,Math.max(1,y2-y1));}
+    let pk=0;for(let i=0;i<n;i++)pk=Math.max(pk,Math.abs(REN.x[i]));
+    $('#rInfo').textContent=`${ms.toFixed(0)} ms  peak ${(20*Math.log10(pk+1e-9)).toFixed(1)} dB  ${hz2note(REN.hz).name}`;
+    $('#rStale').hidden=REN.sig===JSON.stringify(P);};
+  $('#rGen').onclick=()=>{gen();$('#rGen').blur();};
+  $('#rExp').onclick=()=>{if(!REN)gen();expFile(wavBlob(REN.x),wavName(REN.hz));$('#rExp').blur();};
+  $('#cvRender').addEventListener('dragstart',e=>{if(!REN)gen();const u=URL.createObjectURL(wavBlob(REN.x));try{e.dataTransfer.setData('DownloadURL','audio/wav:'+wavName(REN.hz)+':'+u);e.dataTransfer.effectAllowed='copy';}catch(_){}setTimeout(()=>URL.revokeObjectURL(u),60000);});
+  setInterval(()=>{if(REN&&!$('#renderView').hidden)drawRen();},600);
+})();
 $('#cvWave').addEventListener('dragstart',e=>{if(dirty){dirty=false;refresh();}const u=URL.createObjectURL(wavBlob());
   try{e.dataTransfer.setData('DownloadURL','audio/wav:'+wavName()+':'+u);e.dataTransfer.effectAllowed='copy';}catch(_){}setTimeout(()=>URL.revokeObjectURL(u),60000);});
 
