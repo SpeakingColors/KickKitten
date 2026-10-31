@@ -42,3 +42,6 @@ The Sauce panel runs a chain inside the render: band split (sub below 110 Hz, bo
 - "Trance Classic 138" is rebuilt from those measurements (pitch curve within a few Hz, level shape, length and crest factor close to the measured median).
 - Six new "Trance clicks" generated from the measured click envelope and spectrum.
 - Default Len for clicks and attacks is now much longer (45 to 100 ms), so they are audible straight away.
+
+## v1.16
+- 45 "Trance attacks" and 45 "Trance clicks" are built into the plugin, in the layer menu (first folders). They are the first 70 ms and the first 30 ms (high-passed) of 45 trance kicks from a royalty-free sample pack the author bought and has licensed for commercial use. Everything ships inside the one installer, no loose files.
