@@ -35,3 +35,10 @@ The Sauce panel runs a chain inside the render: band split (sub below 110 Hz, bo
 - Tone EQ is much stronger (Mud up to -12 dB, Chest up to +8 dB, Shine shelf up to +15 dB above 2.5 kHz).
 - Moving any Sauce knob switches Sauce Amount on when it was 0.
 - New default preset "Trance Classic 138": about 1/8 note long, Sauce on, glue 30 ms attack, 4:1, limiter on. Starting point only, not verified against any commercial kick.
+
+## v1.15
+- Learned from measuring 45 trance kicks (numbers only, no audio copied into this repo): real trance kicks hold near full level for about 180 ms and then drop (Shape control, 4 to 5), their pitch falls slowly, about 580 Hz at 2 ms, 250 at 8 ms, 150 at 30 ms, 100 at 56 ms, 70 at 100 ms, then 55 Hz, and the click lasts about 5 ms to 10 percent.
+- New Shape knob (decay curve), Decay up to 500 ms, Click length up to 40 ms.
+- "Trance Classic 138" is rebuilt from those measurements (pitch curve within a few Hz, level shape, length and crest factor close to the measured median).
+- Six new "Trance clicks" generated from the measured click envelope and spectrum.
+- Default Len for clicks and attacks is now much longer (45 to 100 ms), so they are audible straight away.

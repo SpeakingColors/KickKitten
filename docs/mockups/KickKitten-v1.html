@@ -306,11 +306,12 @@ const SPEC=[
  {id:'curve',label:'Curve',min:0.5,max:2,log:1,unit:'',dec:2,def:1,tip:'Shape of the fall. 1.00 is exponential. Lower drops faster at the start, higher drops slower at the start.'},
  {id:'clickLvl',label:'Level',min:0,max:100,unit:' %',dec:0,def:50,tip:'Loudness of the click, the short high knock that lets you hear the kick inside a wall of supersaws.'},
  {id:'clickFreq',label:'Freq',min:1500,max:8000,log:1,unit:' Hz',dec:0,def:3500,tip:'Centre frequency of the click. Roughly 2 to 5 kHz cuts through leads.'},
- {id:'clickLen',label:'Length',min:1,max:15,log:1,unit:' ms',dec:1,def:4,tip:'How long the click lasts. Longer clicks sound harder and more clicky.'},
+ {id:'clickLen',label:'Length',min:1,max:40,log:1,unit:' ms',dec:1,def:4,tip:'How long the click lasts. Longer clicks sound harder and more clicky.'},
  {id:'body',label:'Body',min:0,max:100,unit:' %',dec:0,def:80,tip:'Extra punch in the first tens of milliseconds, while the pitch is still falling through the chest range.'},
  {id:'sub',label:'Sub',min:0,max:100,unit:' %',dec:0,def:90,tip:'Level of the tail that sits on the Tail pitch. This is the low weight you feel.'},
  {id:'hold',label:'Hold',min:0,max:30,unit:' ms',dec:1,def:12,tip:'Keeps the kick at full level for a few ms before it decays, so the top of the hit lands harder.'},
- {id:'decay',label:'Decay',min:40,max:300,log:1,unit:' ms',dec:0,def:140,tip:'Time from the end of Hold until the kick is silent (-60 dB). The marker on the waveform shows one 16th note at your tempo.'},
+ {id:'decay',label:'Decay',min:40,max:500,log:1,unit:' ms',dec:0,def:140,tip:'Time from the end of Hold until the kick is silent (-60 dB). The marker on the waveform shows one 16th note at your tempo.'},
+ {id:'ampShape',label:'Shape',min:1,max:6,unit:'',dec:1,def:1,tip:'Shape of the decay. 1.0 fades steadily from the start. Higher keeps the kick near full level for most of its length, then drops fast at the end. Real trance kicks sit around 4 to 5.'},
  {id:'drive',label:'Drive',min:0,max:100,unit:' %',dec:0,def:15,tip:'Smooth symmetric saturation. Adds harmonics so the kick is heard on small speakers. Level is matched, so it does not just get louder.'},
  {id:'trans',label:'Transistor',min:0,max:100,unit:' %',dec:0,def:10,tip:'Asymmetric saturation with even harmonics and extra low weight.'},
  {id:'fuzz',label:'Fuzz',min:0,max:100,unit:' %',dec:0,def:0,tip:'Smooth fuzz stage. Keep low for clean kicks, push for hard dance.'},
@@ -350,7 +351,7 @@ let bpm=138;
 
 /* ---------- layers ---------- */
 const SRCN=['Off','Click','Tick','Snap','Zap','Noise top','Ping','Sample'];
-const SRCLEN=[12,20,12,25,35,60,30,80];
+const SRCLEN=[12,45,40,60,80,100,90,80];
 const SAMP=[null,null,null],SLOTMSG=['','',''];
 function bqMake(type,f,fs){const q=type==='bp'?1.2:0.7071,w=2*Math.PI*f/fs,c=Math.cos(w),sn=Math.sin(w),al=sn/(2*q);let b0,b1,b2;
   if(type==='hp'){b0=(1+c)/2;b1=-(1+c);b2=(1+c)/2;}else if(type==='lp'){b0=(1-c)/2;b1=1-c;b2=(1-c)/2;}else{b0=al;b1=0;b2=-al;}
@@ -429,7 +430,7 @@ const BANKSR=48000,BANK=[],BANKBUF={};
   B(G6,'Flute chiff',150,.2,(a,R)=>{for(let i=0;i<a.length;i++){const t=i/BANKSR,e=(1-E(-t/.006))*E(-t/.05);a[i]=R()*e;}F(a,'bp',4200);});
   B(G2,'Kick punch',120,.4,(a,R)=>{sw(a,240,48,.035,.12);for(let i=0;i<192;i++)a[i]+=R()*.3*(1-i/192);});
   B(G2,'Kick hard',160,.45,(a)=>sw(a,520,52,.022,.16,3.2));
-  const SUB={'Click soft':'Soft','Pop':'Soft','Rubber tick':'Soft','Key thock':'Soft','Click hard':'Hard','Needle':'Hard','Click tok':'Hard','Glass tick':'Hard','Wood block':'Wood and metal','Clave':'Wood and metal','Mallet tok':'Wood and metal',
+  const SUB={'Trance snap':'Trance','Trance pop':'Trance','Trance tick':'Trance','Trance knock':'Trance','Trance crack':'Trance','Trance sizzle':'Trance','Click soft':'Soft','Pop':'Soft','Rubber tick':'Soft','Key thock':'Soft','Click hard':'Hard','Needle':'Hard','Click tok':'Hard','Glass tick':'Hard','Wood block':'Wood and metal','Clave':'Wood and metal','Mallet tok':'Wood and metal',
    'Kick click':'Beaters','Kick beater':'Beaters','Body slap':'Beaters','Kick knock':'Knocks','Punch':'Knocks','Kick punch':'Knocks','Hard knock':'Knocks','Tom thump':'Knocks','Kick hard':'Heavy','Gabber crunch':'Heavy','Sub thump':'Heavy',
    'Snare crack':'Snares','Snare tight':'Snares','Clap':'Claps','Rim':'Rims and snaps','Finger snap':'Rims and snaps','Slap':'Rims and snaps',
    'Hat closed':'Hats','Hat open':'Hats','Crash tick':'Hats','Shaker':'Hats','Noise burst':'Noise','Noise swell':'Noise','Air puff':'Noise',
@@ -437,8 +438,13 @@ const BANKSR=48000,BANK=[],BANKBUF={};
    'Pluck soft':'Plucks','Pluck hard':'Plucks','Pluck pizz':'Plucks','Pluck glass':'Plucks','Guitar pick':'Plucks','Pluck short':'Plucks',
    'Tine ping':'Bells','Metal ping':'Bells','Cowbell tick':'Bells','Bell tick':'Bells','Chime':'Bells','Marimba':'Bells',
    'Piano hammer':'Keys and brass','Piano tick':'Keys and brass','Brass blat':'Keys and brass','Rave stab tick':'Keys and brass','Violin bow bite':'Bow and breath','Bow chiff':'Bow and breath','Flute chiff':'Bow and breath'};
+  const G7='Trance clicks';
+  const tc=(name,t10,fc,knock,lev,fk)=>B(G7,name,80,.12,(a,R)=>{const tau=t10/2.3/1000;const n=new Float32Array(a.length);for(let i=0;i<a.length;i++)n[i]=R();F(n,'hp',1500);F(n,'lp',Math.min(16000,fc*2.2));
+    for(let i=0;i<a.length;i++){const t=i/BANKSR;a[i]=n[i]*E(-t/tau)*lev;}if(knock>0)sw(a,fk*1.6,fk*0.6,.003,.006,0,knock*.5);a[0]+=.4;});
+  tc('Trance snap',5.6,5800,.5,1.4,1500);tc('Trance pop',4.3,4700,1,1.3,1400);tc('Trance tick',2.7,6200,1,1.4,2200);
+  tc('Trance knock',1.5,5300,6,1.0,1200);tc('Trance crack',10.5,6500,.6,1.2,1700);tc('Trance sizzle',32,9600,.25,1.0,2000);
   OWN.forEach(s=>BANK.push({group:'Your samples',sub:s.folder,name:s.name,len:s.ms,sec:s.ms/1000,pcm:s}));
-  BANK.forEach(b=>{b.sub=b.sub||SUB[b.name]||'Other';b.len=Math.max(b.len,Math.min(800,Math.round(b.sec*1000)));});
+  BANK.forEach(b=>{b.sub=b.sub||SUB[b.name]||'Other';b.len=Math.max(60,b.len,Math.min(800,Math.round(b.sec*1000)));});
 })();
 function bankBuf(k){
   if(BANKBUF[k])return BANKBUF[k];const b=BANK[k];if(!b)return null;
@@ -566,13 +572,13 @@ function renderKick(p,sr){
   const w0=2*Math.PI*p.clickFreq/fs,al=Math.sin(w0)/(2*1.2),cw=Math.cos(w0);
   const b0=al/(1+al),b2=-al/(1+al),a1=-2*cw/(1+al),a2=(1-al)/(1+al);
   let x1=0,x2=0,y1=0,y2=0,seed=12345,phi=0;
-  const tauC=(p.clickLen/1000)/4.6,sw=p.sweep/1000,twoPi=2*Math.PI;
+  const shp=p.ampShape||1,tauC=(p.clickLen/1000)/4.6,sw=p.sweep/1000,twoPi=2*Math.PI;
   const bl=p.body/100,sl=p.sub/100,cl=p.clickLvl/100*1.1;
   for(let i=0;i<N;i++){
     const t=i/fs;
     const f=p.env?envF(p.env,t*1000):p.tailHz+(p.startHz-p.tailHz)*Math.exp(-3*Math.pow(t/sw,p.curve));
     phi+=twoPi*f/fs;
-    const amp=t<hold?1:Math.pow(10,-3*(t-hold)/dec);
+    const amp=t<hold?1:Math.pow(10,-3*Math.pow((t-hold)/dec,shp));
     const tone=Math.sin(phi)*(bl*Math.exp(-t/0.035)+sl)*amp;
     seed=(seed*1664525+1013904223)>>>0;
     const n=seed/2147483648-1;
@@ -748,7 +754,7 @@ function syncKey(){
   const g2=group(c,'Fall');['startHz','sweep','curve'].forEach(i=>mkKnob(g2,i));
   const g3=group($('#ctlWave'),'Click');['clickLvl','clickFreq','clickLen'].forEach(i=>mkKnob(g3,i));
   const g4=group($('#ctlWave'),'Layers');['body','sub'].forEach(i=>mkKnob(g4,i));
-  const g5=group($('#ctlWave'),'Amp');['hold','decay'].forEach(i=>mkKnob(g5,i));
+  const g5=group($('#ctlWave'),'Amp');['hold','decay','ampShape'].forEach(i=>mkKnob(g5,i));
   const g6=group($('#ctlSpec'),'Purr Trio');['drive','trans','fuzz'].forEach(i=>mkKnob(g6,i));
   const g7=group($('#ctlSpec'));mkKnob(g7,'clip');
   mkKnob(group($('#ctlSauce1'),'Master'),'sauce');
@@ -773,6 +779,7 @@ syncKey();
 const slotEls=[];
 const TREE={name:'',kids:[{name:'Off',v:0},{name:'Live tops',kids:[1,2,3,4,5,6].map(v=>({name:SRCN[v],v}))},{name:'Your sample',v:7}]};
 [...new Set(BANK.map(b=>b.group))].forEach(g=>{const f={name:g,kids:[]};[...new Set(BANK.filter(b=>b.group===g).map(b=>b.sub))].forEach(s=>{f.kids.push({name:s,kids:BANK.map((b,j)=>b.group===g&&b.sub===s?{name:b.name,v:j+8}:null).filter(Boolean)});});TREE.kids.push(f);});
+{const i=TREE.kids.findIndex(k=>k.name==='Trance clicks');if(i>3){const f=TREE.kids.splice(i,1)[0];TREE.kids.splice(3,0,f);}}
 function flat(n,o){n.kids.forEach(k=>{if(k.kids)flat(k,o);else o.push(k.v);});return o;}
 const ORDER=flat(TREE,[]);
 function srcOrder(i){return ORDER.filter(v=>v!==7||SAMP[i]);}
@@ -1206,7 +1213,7 @@ $('#kmP').onclick=()=>setKM(true);$('#kmS').onclick=()=>setKM(false);
 const mk=(name,tag,o)=>({name,tag,p:Object.assign({},o)});
 const D=()=>{const o={};SPEC.forEach(s=>o[s.id]=s.def);LK.forEach(k=>o[k]=k.endsWith('pol')?1:0);return o;};
 const FACTORY=[
- mk('Trance Classic 138','trance',Object.assign(D(),{tailHz:48.999,startHz:1200,sweep:28,curve:0.9,clickLvl:55,clickFreq:4200,clickLen:4,body:100,sub:90,hold:14,decay:205,drive:40,trans:20,fuzz:10,clip:40,sauce:100,sPunch:70,sThump:65,sBloom:55,sCrack:50,sLoud:55,sGlue:45,gThr:-14,gRat:4,gAtk:30,gRel:100,lim:1,limG:4,eMud:45,eChest:30,eShine:25})),
+ mk('Trance Classic 138','trance',Object.assign(D(),{tailHz:55,startHz:900,sweep:30,curve:1,env:[[0,900,0],[4,464,0],[8,252,0],[16,208,0],[30,153,0],[50,110,0],[75,80,0],[100,55,0]],clickLvl:80,clickFreq:4800,clickLen:10,body:70,sub:90,hold:6,decay:280,ampShape:4.6,drive:30,trans:15,fuzz:0,clip:15,sauce:100,sPunch:55,sThump:50,sBloom:0,sCrack:50,sLoud:10,sGlue:15,gThr:-14,gRat:4,gAtk:30,gRel:100,lim:0,limG:3,eMud:40,eChest:20,eShine:25})),
  mk('Uplifting 138','uplifting',D()),
  mk('Dark Rolling','dark',Object.assign(D(),{tailHz:48.999,startHz:700,sweep:35,curve:1.1,clickLvl:35,clickFreq:2500,clickLen:3,body:70,sub:100,hold:14,decay:160,drive:25,trans:20,fuzz:0,clip:20})),
  mk('Punchy Click','punchy',Object.assign(D(),{tailHz:55,startHz:1000,sweep:24,curve:0.9,clickLvl:80,clickFreq:4500,clickLen:5,body:100,sub:70,hold:10,decay:120,drive:20,trans:10,fuzz:5,clip:30,l0src:3,l0lvl:35,l0len:20,l0hp:2000})),
