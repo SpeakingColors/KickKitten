@@ -210,7 +210,7 @@ button.chip:hover{border-color:var(--selb)}
         <div class="ctl" id="ctlSpec"></div>
       </section>
       <section class="panel" id="pWave" style="grid-column:1;grid-row:2">
-        <h2>Waveform &amp; layers <small id="waveSub"></small><button class="mini" id="expBtn" data-tip="Save the finished kick as a 24-bit mono .wav file on your computer. You can also drag the waveform straight into your DAW.">Export .wav</button></h2>
+        <h2>Waveform &amp; layers <small id="waveSub"></small><button class="mini" id="expBtn" data-tip="Save the finished kick as a 24-bit mono .wav file on your computer (inside this web preview it arrives zipped). You can also drag the waveform straight into your DAW.">Export .wav</button></h2>
         <canvas id="cvWave" draggable="true" aria-label="Kick waveform with time ruler. Drag it into your DAW to drop the kick as a .wav file." data-tip="Drag this waveform into your DAW or a folder to drop the kick as a .wav file. Or use Export .wav."></canvas>
         <div class="ctl" id="ctlWave"></div>
       </section>
@@ -941,7 +941,16 @@ function wavBlob(){
   for(let i=0;i<n;i++){let s=Math.round(clamp(buf[i],-1,1)*8388607);if(s<0)s+=16777216;const o=44+i*3;v.setUint8(o,s&255);v.setUint8(o+1,(s>>8)&255);v.setUint8(o+2,(s>>16)&255);}
   return new Blob([bytes],{type:'audio/wav'});}
 function wavName(){const c=getCur();const nm=((c?c.name:'Kick').replace(/[^A-Za-z0-9 #-]/g,'').trim().replace(/\s+/g,'_'))||'Kick';return `KickKitten_${nm}_${hz2note(P.tailHz).name.replace('#','s')}.wav`;}
-$('#expBtn').addEventListener('click',()=>{if(dirty){dirty=false;refresh();}const u=URL.createObjectURL(wavBlob()),a=document.createElement('a');a.href=u;a.download=wavName();document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);$('#expBtn').blur();});
+function zipOne(name,u8){const enc=new TextEncoder().encode(name);let c,tb=[];for(let n=0;n<256;n++){c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;tb[n]=c>>>0;}
+  let crc=0xFFFFFFFF;for(let i=0;i<u8.length;i++)crc=tb[(crc^u8[i])&255]^(crc>>>8);crc=(crc^0xFFFFFFFF)>>>0;
+  const L=30+enc.length,C=46+enc.length,out=new Uint8Array(L+u8.length+C+22),v=new DataView(out.buffer);
+  v.setUint32(0,0x04034b50,true);v.setUint16(4,20,true);v.setUint32(14,crc,true);v.setUint32(18,u8.length,true);v.setUint32(22,u8.length,true);v.setUint16(26,enc.length,true);out.set(enc,30);out.set(u8,L);
+  let o=L+u8.length;v.setUint32(o,0x02014b50,true);v.setUint16(o+4,20,true);v.setUint16(o+6,20,true);v.setUint32(o+16,crc,true);v.setUint32(o+20,u8.length,true);v.setUint32(o+24,u8.length,true);v.setUint16(o+28,enc.length,true);out.set(enc,o+46);
+  o+=C;v.setUint32(o,0x06054b50,true);v.setUint16(o+8,1,true);v.setUint16(o+10,1,true);v.setUint32(o+12,C,true);v.setUint32(o+16,L+u8.length,true);return out;}
+$('#expBtn').addEventListener('click',async()=>{if(dirty){dirty=false;refresh();}$('#expBtn').blur();const bl=wavBlob(),nm=wavName();
+  let dl=null;try{if(window.claude&&claude.use)dl=await claude.use('downloads');}catch(_){}
+  if(dl){try{const z=zipOne(nm,new Uint8Array(await bl.arrayBuffer()));await dl.save({filename:nm.replace(/\.wav$/,'.zip'),data:z});}catch(_){}return;}
+  const u=URL.createObjectURL(bl),a=document.createElement('a');a.href=u;a.download=nm;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);});
 $('#cvWave').addEventListener('dragstart',e=>{if(dirty){dirty=false;refresh();}const u=URL.createObjectURL(wavBlob());
   try{e.dataTransfer.setData('DownloadURL','audio/wav:'+wavName()+':'+u);e.dataTransfer.effectAllowed='copy';}catch(_){}setTimeout(()=>URL.revokeObjectURL(u),60000);});
 
