@@ -88,7 +88,16 @@ button.chip:hover{border-color:var(--selb)}
 .slot.drag{border-color:var(--selb);background:var(--sel)}
 .sh{display:flex;align-items:center;gap:4px}
 .sh b{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--title);white-space:nowrap}
-.sh select{flex:1;min-width:0;height:22px;background:var(--btn);border:1px solid var(--line);border-radius:4px;font-size:12px}
+.slot{position:relative}
+.sh .pick{flex:1;min-width:0;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sh .ar{width:20px;padding:0;flex:none}
+.pop{position:absolute;left:0;right:0;bottom:calc(100% + 4px);z-index:40;background:var(--panel);border:1px solid var(--selb);border-radius:6px;padding:3px;box-shadow:0 6px 18px rgba(0,0,0,.5)}
+.pop[hidden]{display:none}
+.pop .pr{display:block;width:100%;height:22px;text-align:left;padding:0 8px;font-size:12px;border:0;border-radius:3px;background:transparent;color:var(--read);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pop .pr:hover{background:var(--sel)}
+.pop .pr.cur{color:var(--title);font-weight:700}
+.pop .pr.fo::after{content:'\203A';float:right}
+.pop .pr.up{color:var(--cap)}
 .sh button{height:22px;padding:0 6px;font-size:12px}
 .slot canvas{display:block;width:100%;height:32px;flex:none;background:var(--display);border:1px solid var(--line);border-radius:3px}
 .sk{display:flex;justify-content:space-between}
@@ -334,6 +343,29 @@ const BANKSR=48000,BANK=[],BANKBUF={};
   B(G6,'Bell tick',150,.3,(a)=>{for(let i=0;i<a.length;i++){const t=i/BANKSR;a[i]=S(TP*2093*t)*E(-t/.05)+.5*S(TP*5776*t)*E(-t/.02);}});
   B(G6,'Rave stab tick',80,.15,(a)=>{for(let i=0;i<a.length;i++){const t=i/BANKSR;a[i]=((2*((880*t)%1)-1)+(2*((887*t)%1)-1))*E(-t/.03);}F(a,'lp',6000);});
   B(G6,'Marimba',200,.35,(a)=>{for(let i=0;i<a.length;i++){const t=i/BANKSR;a[i]=S(TP*523*t)*E(-t/.06)+.4*S(TP*2092*t)*E(-t/.01);}});
+  const ks=(a,f,damp,br)=>{const L=Math.max(2,Math.floor(BANKSR/f)),d=new Float32Array(L);let s=24680;for(let i=0;i<L;i++){s=(Math.imul(s,1664525)+1013904223)>>>0;d[i]=((s>>>8)/16777216*2-1)*br+(1-br)*S(TP*i/L);}let p=0;for(let i=0;i<a.length;i++){const n=(p+1)%L;a[i]=d[p];d[p]=(d[p]+d[n])*.5*(1-damp*.02);p=n;}};
+  B(G6,'Pluck soft',120,.4,(a)=>ks(a,261.63,.55,.35));
+  B(G6,'Pluck hard',120,.4,(a)=>ks(a,261.63,.12,1));
+  B(G6,'Pluck pizz',100,.3,(a)=>{ks(a,261.63,.7,.8);for(let i=0;i<a.length;i++)a[i]*=E(-i/BANKSR/.14);});
+  B(G6,'Pluck glass',150,.5,(a)=>{for(let i=0;i<a.length;i++){const t=i/BANKSR,m=S(TP*915.6*t)*2.6*E(-t/.18);a[i]=S(TP*261.63*t+m)*E(-t/.5);}});
+  B(G6,'Guitar pick',60,.1,(a)=>{ks(a,261.63,.4,1);for(let i=0;i<a.length;i++)a[i]*=E(-i/BANKSR/.02);});
+  B(G6,'Chime',200,.6,(a)=>{const pr=[1,2.76,5.4,8.93,11.34],am=[1,.55,.3,.18,.1],dc=[1.4,.7,.4,.25,.15];for(let i=0;i<a.length;i++){const t=i/BANKSR;let v=0;for(let k=0;k<5;k++)v+=am[k]*S(TP*523.25*pr[k]*t)*E(-t/dc[k]);a[i]=v;}});
+  B(G6,'Piano hammer',50,.08,(a,R)=>{for(let i=0;i<a.length;i++){const t=i/BANKSR;a[i]=R()*.5*E(-t/.004)+S(TP*180*t)*E(-t/.012);}F(a,'lp',6000);});
+  B(G6,'Piano tick',60,.15,(a)=>{ks(a,523.25,.3,1);for(let i=0;i<a.length;i++)a[i]*=E(-i/BANKSR/.03);});
+  B(G6,'Violin bow bite',90,.12,(a,R)=>{for(let i=0;i<a.length;i++){const t=i/BANKSR,e=(1-E(-t/.004))*E(-t/.035);a[i]=((2*((440*t)%1)-1)*.6+R()*.7)*e;}F(a,'bp',3200);});
+  B(G6,'Bow chiff',140,.2,(a,R)=>{for(let i=0;i<a.length;i++){const t=i/BANKSR,e=(1-E(-t/.01))*E(-t/.06);a[i]=(S(TP*261.63*t)*.5+S(TP*523.25*t)*.35+S(TP*785*t)*.25+R()*.5)*e;}});
+  B(G6,'Flute chiff',150,.2,(a,R)=>{for(let i=0;i<a.length;i++){const t=i/BANKSR,e=(1-E(-t/.006))*E(-t/.05);a[i]=R()*e;}F(a,'bp',4200);});
+  B(G2,'Kick punch',120,.4,(a,R)=>{sw(a,240,48,.035,.12);for(let i=0;i<192;i++)a[i]+=R()*.3*(1-i/192);});
+  B(G2,'Kick hard',160,.45,(a)=>sw(a,520,52,.022,.16,3.2));
+  const SUB={'Click soft':'Soft','Pop':'Soft','Rubber tick':'Soft','Key thock':'Soft','Click hard':'Hard','Needle':'Hard','Click tok':'Hard','Glass tick':'Hard','Wood block':'Wood and metal','Clave':'Wood and metal','Mallet tok':'Wood and metal',
+   'Kick click':'Beaters','Kick beater':'Beaters','Body slap':'Beaters','Kick knock':'Knocks','Punch':'Knocks','Kick punch':'Knocks','Hard knock':'Knocks','Tom thump':'Knocks','Kick hard':'Heavy','Gabber crunch':'Heavy','Sub thump':'Heavy',
+   'Snare crack':'Snares','Snare tight':'Snares','Clap':'Claps','Rim':'Rims and snaps','Finger snap':'Rims and snaps','Slap':'Rims and snaps',
+   'Hat closed':'Hats','Hat open':'Hats','Crash tick':'Hats','Shaker':'Hats','Noise burst':'Noise','Noise swell':'Noise','Air puff':'Noise',
+   'Zap':'Zaps','Laser':'Zaps','Zip up':'Zaps','FM bleep':'Glitch','Ring bite':'Glitch','Crackle':'Glitch','Crush tick':'Glitch',
+   'Pluck soft':'Plucks','Pluck hard':'Plucks','Pluck pizz':'Plucks','Pluck glass':'Plucks','Guitar pick':'Plucks','Pluck short':'Plucks',
+   'Tine ping':'Bells','Metal ping':'Bells','Cowbell tick':'Bells','Bell tick':'Bells','Chime':'Bells','Marimba':'Bells',
+   'Piano hammer':'Keys and brass','Piano tick':'Keys and brass','Brass blat':'Keys and brass','Rave stab tick':'Keys and brass','Violin bow bite':'Bow and breath','Bow chiff':'Bow and breath','Flute chiff':'Bow and breath'};
+  BANK.forEach(b=>{b.sub=SUB[b.name]||'Other';});
 })();
 function bankBuf(k){
   if(BANKBUF[k])return BANKBUF[k];const b=BANK[k];if(!b)return null;
@@ -569,8 +601,17 @@ function syncKey(){
 syncKey();
 /* layers UI */
 const slotEls=[];
+const TREE={name:'',kids:[{name:'Off',v:0},{name:'Live tops',kids:[1,2,3,4,5,6].map(v=>({name:SRCN[v],v}))},{name:'Your sample',v:7}]};
+[...new Set(BANK.map(b=>b.group))].forEach(g=>{const f={name:g,kids:[]};[...new Set(BANK.filter(b=>b.group===g).map(b=>b.sub))].forEach(s=>{f.kids.push({name:s,kids:BANK.map((b,j)=>b.group===g&&b.sub===s?{name:b.name,v:j+8}:null).filter(Boolean)});});TREE.kids.push(f);});
+function flat(n,o){n.kids.forEach(k=>{if(k.kids)flat(k,o);else o.push(k.v);});return o;}
+const ORDER=flat(TREE,[]);
+function srcOrder(i){return ORDER.filter(v=>v!==7||SAMP[i]);}
+function closePops(){slotEls.forEach(e=>e&&e.sec.querySelector('.pop')._close());}
+function audition(){wake();if(dirty){dirty=false;refresh();}hit();}
+document.addEventListener('pointerdown',e=>{if(!e.target.closest('.pop,.pick'))closePops();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closePops();});
 function setSrc(i,v,gesture){P[`l${i}src`]=v;if(gesture&&v>0)set(`l${i}len`,SRCLEN[v]);slotRefresh(i);dirty=true;presetEdited();}
-function slotRefresh(i){const e=slotEls[i];if(!e)return;e.sel.value=String(P[`l${i}src`]);e.pl.classList.toggle('on',P[`l${i}pol`]<0);
+function slotRefresh(i){const e=slotEls[i];if(!e)return;{const v=P[`l${i}src`];e.sel.pick.textContent=v===7&&SAMP[i]?'Sample: '+SAMP[i].name:SRCN[v];}e.pl.classList.toggle('on',P[`l${i}pol`]<0);
   e.sk.children[2].style.opacity=P[`l${i}src`]>=7?1:0.35;}
 async function loadFile(i,f){
   const msg=t=>{SLOTMSG[i]=t;dirty=true;};
@@ -591,13 +632,24 @@ async function loadFile(i,f){
   const host=$('#tops');
   'ABC'.split('').forEach((nm,i)=>{
     const sec=document.createElement('section');sec.className='slot';
-    sec.innerHTML=`<div class="sh"><b>Layer ${nm}</b><select aria-label="Layer ${nm} sound" data-tip="Pick a built-in click, attack or top (about 50 to choose from), or Sample for your own sound."></select><button class="ld" data-tip="Load your own sound (wav, flac, mp3 or ogg, up to 3 seconds). You can also drop a file on this layer.">Load</button><button class="pl" data-tip="Flip the polarity of this layer.">Ø</button></div><canvas id="lw${i}" aria-label="Layer ${nm} shape"></canvas><div class="sk"></div><input type="file" accept="audio/*" hidden aria-label="Load sound for layer ${nm}">`;
+    sec.innerHTML=`<div class="sh"><b>Layer ${nm}</b><button class="ar pv" aria-label="Previous sound" data-tip="Previous sound. Plays the kick so you can hear it.">‹</button><button class="pick" aria-label="Layer ${nm} sound" data-tip="Open the sound folders: clicks, kick attacks, snaps, hats, zaps, tonal tops, and your own sample."></button><button class="ar nx" aria-label="Next sound" data-tip="Next sound. Plays the kick so you can hear it.">›</button><button class="ld" data-tip="Load your own sound (wav, flac, mp3 or ogg, up to 3 seconds). You can also drop a file on this layer.">Load</button><button class="pl" data-tip="Flip the polarity of this layer.">Ø</button></div><canvas id="lw${i}" aria-label="Layer ${nm} shape"></canvas><div class="sk"></div><input type="file" accept="audio/*" hidden aria-label="Load sound for layer ${nm}"><div class="pop" hidden></div>`;
     host.appendChild(sec);
-    const sel=sec.querySelector('select'),sk=sec.querySelector('.sk'),fi=sec.querySelector('input');
-    sel.innerHTML=SRCN.slice(0,8).map((n,j)=>`<option value="${j}">${n}</option>`).join('')+[...new Set(BANK.map(b=>b.group))].map(gr=>`<optgroup label="${gr}">`+BANK.map((b,j)=>b.group===gr?`<option value="${j+8}">${b.name}</option>`:'').join('')+'</optgroup>').join('');
+    const sk=sec.querySelector('.sk'),fi=sec.querySelector('input'),pick=sec.querySelector('.pick'),pop=sec.querySelector('.pop');
+    let path=[];
+    const choose=v=>{setSrc(i,v,true);audition();pop.hidden=true;if(v===7&&!SAMP[i])fi.click();};
+    const node=()=>path.reduce((n,k)=>n.kids.find(x=>x.name===k),TREE);
+    function drawPop(){const n=node();pop.innerHTML='';
+      const add=(cls,txt,fn)=>{const b=document.createElement('button');b.className='pr '+cls;b.textContent=txt;b.addEventListener('click',e=>{e.stopPropagation();fn();});pop.appendChild(b);};
+      if(path.length)add('up','\u2039 '+path.join(' / '),()=>{path.pop();drawPop();});
+      n.kids.forEach(k=>{if(k.kids)add('fo',k.name,()=>{path.push(k.name);drawPop();});else add(k.v===P[`l${i}src`]?'cur':'',k.v===7&&SAMP[i]?'Sample: '+SAMP[i].name:k.name,()=>choose(k.v));});}
+    pick.addEventListener('click',()=>{const was=pop.hidden;closePops();if(was){path=[];drawPop();pop.hidden=false;}pick.blur();});
+    pop._close=()=>{pop.hidden=true;};
+    const go=d=>{const o=srcOrder(i),k=o.indexOf(P[`l${i}src`]);choose(o[(k+d+o.length)%o.length]);};
+    sec.querySelector('.pv').addEventListener('click',e=>{go(-1);e.currentTarget.blur();});
+    sec.querySelector('.nx').addEventListener('click',e=>{go(1);e.currentTarget.blur();});
+    const sel={pick};
     ['lvl','pitch','start','len','delay','hp','lp'].forEach(x=>mkKnob(sk,`l${i}${x}`,true));
     slotEls[i]={sel,sk,pl:sec.querySelector('.pl'),sec};
-    sel.addEventListener('change',()=>{const v=+sel.value;setSrc(i,v,true);if(v===7&&!SAMP[i])fi.click();});
     sec.querySelector('.ld').addEventListener('click',()=>fi.click());
     fi.addEventListener('change',()=>{loadFile(i,fi.files[0]);fi.value='';});
     slotEls[i].pl.addEventListener('click',()=>{P[`l${i}pol`]*=-1;slotRefresh(i);dirty=true;presetEdited();});
@@ -971,7 +1023,7 @@ $('#bGuide').onclick=()=>openDlg(`<h3>Guide</h3><ul>
 <li>The orange line on the waveform is where the kick ends. The purple line is one 16th note at your tempo.</li>
 <li>Space: hit the kick as set. Left and right arrows: previous and next preset.</li>
 <li>Keys work like Ableton Live: A S D F G H J K L ; ' are white keys, W E T Y U O P are black keys, Z octave down, X octave up. Same plays the identical kick on every key. Pitched retunes the kick to the note you press, so it plays up or down.</li>
-<li>Layers A, B and C add clicks, attacks and tops on top of the kick. Pick one of about 50 built-in sounds in six groups, or drop your own sound file on a layer, or press Load. Level, Pitch, Start, Len, Delay, HP and LP shape each one.</li>
+<li>Layers A, B and C add clicks, attacks and tops on top of the kick. Pick one of about 60 built-in sounds from the folders (the arrows step through them and play the kick), or drop your own sound file on a layer, or press Load. Level, Pitch, Start, Len, Delay, HP and LP shape each one.</li>
 <li>Click the note chip under Key (for example F1 +45 ct) to snap Tail to exactly that note.</li>
 <li>Zoom with the buttons, drag any edge or corner, or double click a wood side to return to 100%.</li></ul><div class="btns"><button id="x" class="on">Close</button></div>`,d=>d.querySelector('#x').onclick=closeDlg);
 $('#bSet').onclick=()=>openDlg(`<h3>Settings</h3>
