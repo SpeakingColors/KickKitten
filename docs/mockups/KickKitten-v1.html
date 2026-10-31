@@ -277,9 +277,76 @@ function bqMake(type,f,fs){const q=type==='bp'?1.2:0.7071,w=2*Math.PI*f/fs,c=Mat
   if(type==='hp'){b0=(1+c)/2;b1=-(1+c);b2=(1+c)/2;}else if(type==='lp'){b0=(1-c)/2;b1=1-c;b2=(1-c)/2;}else{b0=al;b1=0;b2=-al;}
   const a0=1+al;return{b0:b0/a0,b1:b1/a0,b2:b2/a0,a1:-2*c/a0,a2:(1-al)/a0,x1:0,x2:0,y1:0,y2:0};}
 function bqRun(f,v){const y=f.b0*v+f.b1*f.x1+f.b2*f.x2-f.a1*f.y1-f.a2*f.y2;f.x2=f.x1;f.x1=v;f.y2=f.y1;f.y1=isFinite(y)?y:0;return f.y1;}
+/* ---------- sound bank: made from maths at start-up, no recorded or vendor audio ---------- */
+const BANKSR=48000,BANK=[],BANKBUF={};
+(function(){
+  const TP=2*Math.PI,E=Math.exp,S=Math.sin;
+  const mkRnd=()=>{let s=987654321;return()=>{s=(Math.imul(s,1664525)+1013904223)>>>0;return(s>>>8)/16777216*2-1;};};
+  const F=(a,t,f)=>{const q=bqMake(t,f,BANKSR);for(let i=0;i<a.length;i++)a[i]=bqRun(q,a[i]);return a;};
+  const sw=(a,f0,f1,tau,dec,drv,amp)=>{let ph=0;for(let i=0;i<a.length;i++){const t=i/BANKSR;ph+=TP*(f1+(f0-f1)*E(-t/tau))/BANKSR;let v=S(ph)*E(-t/dec);if(drv)v=Math.tanh(v*(1+drv));a[i]+=v*(amp||1);}};
+  const B=(group,name,len,sec,body)=>BANK.push({group,name,len,sec,body});
+  const G1='Clicks',G2='Kick attacks',G3='Snaps and claps',G4='Hats and noise',G5='Zaps and FX',G6='Tonal tops';
+  B(G1,'Click soft',12,.02,(a,R)=>{for(let i=0;i<a.length;i++)a[i]=R()*E(-i/BANKSR/.0012);F(a,'lp',7000);});
+  B(G1,'Click hard',10,.02,(a,R)=>{for(let i=0;i<a.length;i++)a[i]=R()*E(-i/BANKSR/.0007);a[0]=1;F(a,'hp',2500);});
+  B(G1,'Click tok',20,.03,(a,R)=>{for(let i=0;i<a.length;i++){const t=i/BANKSR;a[i]=(S(TP*1900*t)*.8+R()*.4)*E(-t/.0022);}});
+  B(G1,'Needle',6,.01,(a)=>{for(let i=0;i<a.length;i++){const t=i/BANKSR;a[i]=S(TP*9000*t)*E(-t/.0003);}a[0]+=1;});
+  B(G1,'Glass tick',10,.03,(a)=>{for(let i=0;i<a.length;i++){const t=i/BANKSR;a[i]=(S(TP*4200*t)+.6*S(TP*6100*t))*E(-t/.0015);}});
+  B(G1,'Wood block',30,.06,(a,R)=>{for(let i=0;i<a.length;i++){const t=i/BANKSR;a[i]=S(TP*880*t)*E(-t/.006)+.5*S(TP*1650*t)*E(-t/.004)+.3*R()*E(-t/.001);}});
+  B(G1,'Clave',40,.08,(a)=>{for(let i=0;i<a.length;i++){const t=i/BANKSR;a[i]=S(TP*2500*t)*E(-t/.012)+.3*S(TP*3700*t)*E(-t/.008);}});
+  B(G1,'Rubber tick',20,.04,(a,R)=>{for(let i=0;i<a.length;i++){const t=i/BANKSR;a[i]=S(TP*300*t)*E(-t/.004)+.5*R()*E(-t/.0008);}F(a,'lp',3500);});
+  B(G1,'Pop',30,.04,(a,R)=>{for(let i=0;i<a.length;i++)a[i]=R()*E(-i/BANKSR/.002);F(a,'lp',4000);});
+  B(G1,'Mallet tok',40,.08,(a,R)=>{for(let i=0;i<a.length;i++){const t=i/BANKSR;a[i]=S(TP*700*t)*E(-t/.01)+.5*R()*E(-t/.0015);}F(a,'lp',5000);});
+  B(G1,'Key thock',60,.1,(a,R)=>{for(let i=0;i<a.length;i++){const t=i/BANKSR;a[i]=R()*E(-t/.006);}F(a,'lp',1500);for(let i=0;i<a.length;i++){const t=i/BANKSR;a[i]+=S(TP*110*t)*E(-t/.02)*.8;}});
+  B(G2,'Kick click',30,.05,(a)=>sw(a,2000,150,.004,.012));
+  B(G2,'Kick beater',40,.06,(a,R)=>{const n=new Float32Array(a.length);for(let i=0;i<n.length;i++)n[i]=R()*E(-i/BANKSR/.003);F(n,'bp',2500);sw(a,400,120,.006,.02);for(let i=0;i<a.length;i++)a[i]+=n[i]*.8;});
+  B(G2,'Kick knock',120,.2,(a)=>sw(a,220,90,.012,.05));
+  B(G2,'Punch',150,.25,(a)=>sw(a,300,60,.02,.09,2));
+  B(G2,'Hard knock',80,.12,(a,R)=>{const n=new Float32Array(a.length);for(let i=0;i<n.length;i++)n[i]=R()*E(-i/BANKSR/.004);F(n,'bp',1800);sw(a,800,90,.008,.04);for(let i=0;i<a.length;i++)a[i]+=n[i]*.3;});
+  B(G2,'Gabber crunch',100,.15,(a)=>sw(a,600,70,.015,.06,8));
+  B(G2,'Sub thump',250,.4,(a)=>sw(a,70,38,.06,.22));
+  B(G2,'Tom thump',200,.3,(a)=>sw(a,260,110,.03,.12));
+  B(G2,'Body slap',40,.06,(a,R)=>{const n=new Float32Array(a.length);for(let i=0;i<n.length;i++)n[i]=R()*E(-i/BANKSR/.008);F(n,'bp',900);sw(a,160,160,1,.015);for(let i=0;i<a.length;i++)a[i]+=n[i];});
+  B(G3,'Snare crack',120,.2,(a,R)=>{for(let i=0;i<a.length;i++)a[i]=R()*E(-i/BANKSR/.035);F(a,'hp',1500);for(let i=0;i<a.length;i++){const t=i/BANKSR;a[i]=a[i]*.8+S(TP*190*t)*E(-t/.05)*.6;}});
+  B(G3,'Snare tight',70,.12,(a,R)=>{for(let i=0;i<a.length;i++)a[i]=R()*E(-i/BANKSR/.018);F(a,'hp',2000);for(let i=0;i<a.length;i++){const t=i/BANKSR;a[i]+=S(TP*220*t)*E(-t/.025)*.7;}});
+  B(G3,'Clap',150,.25,(a,R)=>{for(let i=0;i<a.length;i++){const t=i/BANKSR;let e=0;for(let k=0;k<3;k++)if(t>=k*.009)e+=E(-(t-k*.009)/.003);if(t>=.027)e+=.6*E(-(t-.027)/.04);a[i]=R()*e;}F(a,'bp',1500);});
+  B(G3,'Rim',40,.08,(a,R)=>{for(let i=0;i<a.length;i++){const t=i/BANKSR;a[i]=S(TP*1700*t)*E(-t/.003)+S(TP*480*t)*E(-t/.008)+.4*R()*E(-t/.001);}});
+  B(G3,'Finger snap',40,.08,(a,R)=>{for(let i=0;i<a.length;i++){const t=i/BANKSR;a[i]=R()*E(-t/.006)+.5*S(TP*3000*t)*E(-t/.003);}F(a,'hp',2500);});
+  B(G3,'Slap',60,.1,(a,R)=>{for(let i=0;i<a.length;i++){const t=i/BANKSR;a[i]=R()*(1-E(-t/.001))*E(-t/.02);}F(a,'bp',1200);});
+  B(G4,'Hat closed',45,.1,(a,R)=>{for(let i=0;i<a.length;i++)a[i]=R()*E(-i/BANKSR/.02);F(a,'hp',7000);});
+  B(G4,'Hat open',200,.5,(a,R)=>{for(let i=0;i<a.length;i++)a[i]=R()*E(-i/BANKSR/.12);F(a,'hp',6000);});
+  B(G4,'Noise burst',100,.3,(a,R)=>{for(let i=0;i<a.length;i++)a[i]=R()*E(-i/BANKSR/.05);F(a,'hp',4000);});
+  B(G4,'Noise swell',120,.3,(a,R)=>{for(let i=0;i<a.length;i++){const t=i/BANKSR;a[i]=R()*(1-E(-t/.03))*E(-t/.06);}F(a,'bp',5000);});
+  B(G4,'Shaker',100,.2,(a,R)=>{for(let i=0;i<a.length;i++){const t=i/BANKSR;a[i]=R()*(1-E(-t/.015))*E(-t/.04);}F(a,'bp',6500);});
+  B(G4,'Crash tick',300,.7,(a,R)=>{for(let i=0;i<a.length;i++)a[i]=R()*E(-i/BANKSR/.25);F(a,'hp',5000);});
+  B(G4,'Air puff',100,.2,(a,R)=>{for(let i=0;i<a.length;i++){const t=i/BANKSR;a[i]=R()*(1-E(-t/.004))*E(-t/.02);}F(a,'lp',3000);});
+  B(G5,'Zap',25,.05,(a)=>{let ph=0;for(let i=0;i<a.length;i++){const t=i/BANKSR;ph+=TP*(700+7300*E(-t/.004))/BANKSR;a[i]=S(ph)*E(-t/.005);}});
+  B(G5,'Laser',120,.2,(a)=>{let ph=0;for(let i=0;i<a.length;i++){const t=i/BANKSR;ph+=TP*(200+5800*E(-t/.03))/BANKSR;a[i]=S(ph)*E(-t/.04);}});
+  B(G5,'Zip up',100,.2,(a)=>{let ph=0;for(let i=0;i<a.length;i++){const t=i/BANKSR;ph+=TP*(300+4000*(1-E(-t/.02)))/BANKSR;a[i]=S(ph)*E(-t/.03);}});
+  B(G5,'FM bleep',80,.15,(a)=>{for(let i=0;i<a.length;i++){const t=i/BANKSR;a[i]=S(TP*1800*t+3*S(TP*900*t)*E(-t/.01))*E(-t/.02);}});
+  B(G5,'Ring bite',60,.1,(a,R)=>{for(let i=0;i<a.length;i++){const t=i/BANKSR;a[i]=R()*S(TP*1500*t)*E(-t/.015);}});
+  B(G5,'Crackle',120,.2,(a,R)=>{let nx=0;for(let i=0;i<a.length;i++){if(i>=nx){a[i]=R();nx=i+Math.floor((.002+(R()*.5+.5)*.012)*BANKSR);}}F(a,'hp',1500);});
+  B(G5,'Crush tick',40,.08,(a,R)=>{let h=0;for(let i=0;i<a.length;i++){if(i%6===0)h=R();a[i]=h*E(-i/BANKSR/.004);}});
+  B(G6,'Tine ping',60,.25,(a)=>{for(let i=0;i<a.length;i++){const t=i/BANKSR;a[i]=S(TP*1046.5*t)*E(-t/.03)+.5*S(TP*5651*t)*E(-t/.008);}});
+  B(G6,'Metal ping',150,.3,(a)=>{[2200,3410,5130,7240].forEach((f,k)=>{for(let i=0;i<a.length;i++){const t=i/BANKSR;a[i]+=S(TP*f*t)*E(-t/(.05/(1+k*.5)))/(1+k*.3);}});});
+  B(G6,'Cowbell tick',150,.3,(a)=>{for(let i=0;i<a.length;i++){const t=i/BANKSR;a[i]=(S(TP*540*t)+S(TP*800*t))*E(-t/.05);}F(a,'bp',700);});
+  B(G6,'Brass blat',120,.2,(a,R)=>{for(let i=0;i<a.length;i++){const t=i/BANKSR,e=(1-E(-t/.01))*E(-t/.04),ph=(233*t)%1;a[i]=((2*ph-1)*.5+R()*.6)*e;}F(a,'bp',1800);});
+  B(G6,'Pluck short',150,.25,(a,R)=>{const L=Math.floor(BANKSR/440),d=new Float32Array(L);for(let i=0;i<L;i++)d[i]=R();let p=0;for(let i=0;i<a.length;i++){const n=(p+1)%L;a[i]=d[p];d[p]=(d[p]+d[n])*.5*.996;p=n;}});
+  B(G6,'Bell tick',150,.3,(a)=>{for(let i=0;i<a.length;i++){const t=i/BANKSR;a[i]=S(TP*2093*t)*E(-t/.05)+.5*S(TP*5776*t)*E(-t/.02);}});
+  B(G6,'Rave stab tick',80,.15,(a)=>{for(let i=0;i<a.length;i++){const t=i/BANKSR;a[i]=((2*((880*t)%1)-1)+(2*((887*t)%1)-1))*E(-t/.03);}F(a,'lp',6000);});
+  B(G6,'Marimba',200,.35,(a)=>{for(let i=0;i<a.length;i++){const t=i/BANKSR;a[i]=S(TP*523*t)*E(-t/.06)+.4*S(TP*2092*t)*E(-t/.01);}});
+})();
+function bankBuf(k){
+  if(BANKBUF[k])return BANKBUF[k];const b=BANK[k];if(!b)return null;
+  const R=(()=>{let s=987654321;return()=>{s=(Math.imul(s,1664525)+1013904223)>>>0;return(s>>>8)/16777216*2-1;};})();
+  const a=new Float32Array(Math.floor(b.sec*BANKSR));b.body(a,R);
+  let pk=1e-9;for(let i=0;i<a.length;i++){if(!isFinite(a[i]))a[i]=0;pk=Math.max(pk,Math.abs(a[i]));}
+  const g=0.9/pk,n=Math.min(64,a.length>>2);for(let i=0;i<a.length;i++)a[i]*=g;for(let i=0;i<n;i++)a[a.length-1-i]*=i/n;
+  return BANKBUF[k]={name:b.name,data:a,sr:BANKSR};
+}
+BANK.forEach(b=>{SRCN.push(b.name);SRCLEN.push(b.len);});
 function genLayer(p,i,fs,N){
   const k='l'+i,src=p[k+'src']|0;if(!src)return null;
-  const sm=SAMP[i];if(src===7&&!sm)return null;
+  const sm=src===7?SAMP[i]:src>7?bankBuf(src-8):null;if(src>=7&&!sm)return null;
   const ratio=Math.pow(2,p[k+'pitch']/12),lenS=p[k+'len']/1000,tau=lenS/4.6;
   const g=p[k+'lvl']/100*0.5*(p[k+'pol']<0?-1:1),i0=Math.floor(p[k+'delay']/1000*fs);
   const out=new Float32Array(N);let seed=777+i*131;
@@ -289,11 +356,11 @@ function genLayer(p,i,fs,N){
   const hpA=src===3?Math.exp(-2*Math.PI*Math.min(1500*ratio,fs*0.4)/fs):0,startS=p[k+'start']/1000;
   for(let j=i0;j<N;j++){
     const t=(j-i0)/fs;let v=0;
-    if(src===7){
+    if(sm){
       const pos=(startS+t*ratio)*sm.sr,ii=Math.floor(pos);
       if(ii>=sm.data.length-1||t>=lenS)break;
       const fr=pos-ii;v=sm.data[ii]*(1-fr)+sm.data[ii+1]*fr;
-      const rem=lenS-t;if(rem<0.005)v*=rem/0.005;
+      const fd=Math.min(0.005,lenS*0.3),rem=lenS-t;if(rem<fd)v*=rem/fd;
     }else{
       if(t>lenS*2)break;
       const e=Math.exp(-t/tau);
@@ -504,7 +571,7 @@ syncKey();
 const slotEls=[];
 function setSrc(i,v,gesture){P[`l${i}src`]=v;if(gesture&&v>0)set(`l${i}len`,SRCLEN[v]);slotRefresh(i);dirty=true;presetEdited();}
 function slotRefresh(i){const e=slotEls[i];if(!e)return;e.sel.value=String(P[`l${i}src`]);e.pl.classList.toggle('on',P[`l${i}pol`]<0);
-  e.sk.children[2].style.opacity=P[`l${i}src`]===7?1:0.35;}
+  e.sk.children[2].style.opacity=P[`l${i}src`]>=7?1:0.35;}
 async function loadFile(i,f){
   const msg=t=>{SLOTMSG[i]=t;dirty=true;};
   if(!f)return;if(!ctx){msg('Audio is not available here.');return;}
@@ -524,10 +591,10 @@ async function loadFile(i,f){
   const host=$('#tops');
   'ABC'.split('').forEach((nm,i)=>{
     const sec=document.createElement('section');sec.className='slot';
-    sec.innerHTML=`<div class="sh"><b>Layer ${nm}</b><select aria-label="Layer ${nm} sound" data-tip="Pick a built-in click, attack or top, or Sample for your own sound."></select><button class="ld" data-tip="Load your own sound (wav, flac, mp3 or ogg, up to 3 seconds). You can also drop a file on this layer.">Load</button><button class="pl" data-tip="Flip the polarity of this layer.">Ø</button></div><canvas id="lw${i}" aria-label="Layer ${nm} shape"></canvas><div class="sk"></div><input type="file" accept="audio/*" hidden aria-label="Load sound for layer ${nm}">`;
+    sec.innerHTML=`<div class="sh"><b>Layer ${nm}</b><select aria-label="Layer ${nm} sound" data-tip="Pick a built-in click, attack or top (about 50 to choose from), or Sample for your own sound."></select><button class="ld" data-tip="Load your own sound (wav, flac, mp3 or ogg, up to 3 seconds). You can also drop a file on this layer.">Load</button><button class="pl" data-tip="Flip the polarity of this layer.">Ø</button></div><canvas id="lw${i}" aria-label="Layer ${nm} shape"></canvas><div class="sk"></div><input type="file" accept="audio/*" hidden aria-label="Load sound for layer ${nm}">`;
     host.appendChild(sec);
     const sel=sec.querySelector('select'),sk=sec.querySelector('.sk'),fi=sec.querySelector('input');
-    sel.innerHTML=SRCN.map((n,j)=>`<option value="${j}">${n}</option>`).join('');
+    sel.innerHTML=SRCN.slice(0,8).map((n,j)=>`<option value="${j}">${n}</option>`).join('')+[...new Set(BANK.map(b=>b.group))].map(gr=>`<optgroup label="${gr}">`+BANK.map((b,j)=>b.group===gr?`<option value="${j+8}">${b.name}</option>`:'').join('')+'</optgroup>').join('');
     ['lvl','pitch','start','len','delay','hp','lp'].forEach(x=>mkKnob(sk,`l${i}${x}`,true));
     slotEls[i]={sel,sk,pl:sec.querySelector('.pl'),sec};
     sel.addEventListener('change',()=>{const v=+sel.value;setSrc(i,v,true);if(v===7&&!SAMP[i])fi.click();});
@@ -700,6 +767,7 @@ function drawLayers(){
     for(let x=0;x<w;x++){let mn=0,mx=0;const a=Math.floor(x/w*N),b=Math.floor((x+1)/w*N)+1;for(let q=a;q<b&&q<N;q++){const v=L[q];if(v<mn)mn=v;if(v>mx)mx=v;}
       g.fillRect(x,h/2-mx*sc,1,Math.max(1,(mx-mn)*sc));}
     g.globalAlpha=1;
+    if(src>7)txt(g,BANK[src-8].name,6,10,CSS.read,'left','10px "JetBrains Mono",monospace');
     if(src===7&&SAMP[i])txt(g,SAMP[i].name,6,10,CSS.read,'left','10px "JetBrains Mono",monospace');
   }
 }
@@ -835,7 +903,7 @@ const all=()=>FACTORY.map((p,i)=>({p,list:'f',i})).concat(user.map((p,i)=>({p,li
 function saveUser(){try{localStorage.setItem('kk-user',JSON.stringify(user));}catch(e){}}
 function getCur(){return cur.list==='f'?FACTORY[cur.i]:user[cur.i];}
 function load(pr){SPEC.forEach(s=>{if(typeof pr.p[s.id]==='number')P[s.id]=clamp(pr.p[s.id],s.min,s.max);});P.pol=pr.p.pol===-1?-1:1;
-  LK.forEach(k=>{const v=pr.p[k];P[k]=k.endsWith('pol')?(v===-1?-1:1):(Number.isInteger(v)&&v>=0&&v<=7?v:0);});
+  LK.forEach(k=>{const v=pr.p[k];P[k]=k.endsWith('pol')?(v===-1?-1:1):(Number.isInteger(v)&&v>=0&&v<SRCN.length?v:0);});
   SPEC.forEach(s=>knobs[s.id]&&knobs[s.id].ui());slotEls.forEach((e,i)=>slotRefresh(i));syncKey();dirty=true;edited=false;nameUi();}
 function nameUi(){const c=getCur();$('#pName').textContent=(c?c.name:'')+(edited?' *':'');
   $('#pRename').disabled=$('#pDel').disabled=cur.list==='f';}
@@ -893,7 +961,7 @@ $('#pImp').onclick=()=>{openDlg(`<h3>Import</h3><p>Paste shared sound text. Unkn
     if(!o||o.kickKitten!==1||typeof o.p!=='object'||o.p===null){d.querySelector('#er').textContent='This is not a Kick Kitten sound.';return;}
     const p={};let n=0;SPEC.forEach(s=>{if(typeof o.p[s.id]==='number'&&isFinite(o.p[s.id])){p[s.id]=clamp(o.p[s.id],s.min,s.max);n++;}});
     if(!n){d.querySelector('#er').textContent='No usable values found.';return;}
-    p.pol=o.p.pol===-1?-1:1;LK.forEach(k=>{const v=o.p[k];if(k.endsWith('pol'))p[k]=v===-1?-1:1;else p[k]=(Number.isInteger(v)&&v>=0&&v<=7)?v:0;});const full=Object.assign(D(),p);
+    p.pol=o.p.pol===-1?-1:1;LK.forEach(k=>{const v=o.p[k];if(k.endsWith('pol'))p[k]=v===-1?-1:1;else p[k]=(Number.isInteger(v)&&v>=0&&v<SRCN.length)?v:0;});const full=Object.assign(D(),p);
     const nm=String(o.name||'Imported').replace(/[^\w .#()+-]/g,'').trim().slice(0,40)||'Imported';
     user.push({name:nm,tag:'imported',p:full});saveUser();cur={list:'u',i:user.length-1};load(user[cur.i]);closeDlg();};});};
 $('#bGuide').onclick=()=>openDlg(`<h3>Guide</h3><ul>
@@ -903,7 +971,7 @@ $('#bGuide').onclick=()=>openDlg(`<h3>Guide</h3><ul>
 <li>The orange line on the waveform is where the kick ends. The purple line is one 16th note at your tempo.</li>
 <li>Space: hit the kick as set. Left and right arrows: previous and next preset.</li>
 <li>Keys work like Ableton Live: A S D F G H J K L ; ' are white keys, W E T Y U O P are black keys, Z octave down, X octave up. Same plays the identical kick on every key. Pitched retunes the kick to the note you press, so it plays up or down.</li>
-<li>Layers A, B and C add clicks, attacks and tops on top of the kick. Pick a built-in sound, or drop your own sound file on a layer, or press Load. Level, Pitch, Start, Len, Delay, HP and LP shape each one.</li>
+<li>Layers A, B and C add clicks, attacks and tops on top of the kick. Pick one of about 50 built-in sounds in six groups, or drop your own sound file on a layer, or press Load. Level, Pitch, Start, Len, Delay, HP and LP shape each one.</li>
 <li>Click the note chip under Key (for example F1 +45 ct) to snap Tail to exactly that note.</li>
 <li>Zoom with the buttons, drag any edge or corner, or double click a wood side to return to 100%.</li></ul><div class="btns"><button id="x" class="on">Close</button></div>`,d=>d.querySelector('#x').onclick=closeDlg);
 $('#bSet').onclick=()=>openDlg(`<h3>Settings</h3>
