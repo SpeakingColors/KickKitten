@@ -91,7 +91,10 @@ button.chip:hover{border-color:var(--selb)}
 #pSauce .ctl,#pGlue .ctl{justify-content:center}
 #pGlue{grid-column:4;grid-row:1/3;justify-content:space-around}
 #pGlue h2 small{display:block;margin:2px 0 0;line-height:1.25}
-#pGlue canvas#cvGlue{flex:none;height:178px}
+#pGlue canvas#cvGlue{flex:1;min-height:110px;height:auto}
+#pGlue{overflow:hidden}
+#glueChips{align-items:center}
+#limBtn{height:22px;padding:0 10px;font-size:11px}
 #limBtn.on{background:var(--curve);color:var(--ground)}
 #cvWave,#cvRender{cursor:grab}
 .tabs{display:flex;gap:4px;margin:0 0 6px}
@@ -99,7 +102,7 @@ button.chip:hover{border-color:var(--selb)}
 .tabs button.on{background:var(--curve);color:var(--ground)}
 #renderView{display:flex;flex-direction:column;gap:8px;flex:1;min-height:0}
 #renderView[hidden],#glueView[hidden]{display:none}
-#glueView{display:flex;flex-direction:column;flex:1;min-height:0;justify-content:space-around}
+#glueView{display:flex;flex-direction:column;flex:1;min-height:0;gap:6px}
 #renderView canvas#cvRender{flex:none;height:210px}
 #renderView .rrow{display:flex;gap:8px;align-items:center;justify-content:space-between}
 #renderView .rrow label{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--cap)}
@@ -235,11 +238,9 @@ button.chip:hover{border-color:var(--selb)}
     <section class="panel" id="pGlue">
       <div class="tabs"><button id="tabGlue" class="on" data-tip="Glue compressor and limiter.">Glue &amp; limiter</button><button id="tabRender" data-tip="Render the finished kick, see all of it, save it as a .wav or drag it into your DAW.">Render</button></div>
       <div id="glueView">
-      <h2 style="margin:0">Glue &amp; limiter <small>A compressor blended under the kick, then an optional limiter.</small></h2>
       <div class="ctl" id="ctlGlue1"></div><div class="ctl" id="ctlGlue2"></div>
       <canvas id="cvGlue" aria-label="Glue compressor meter: level and gain reduction in dB over time"></canvas>
       <div class="chips" id="glueChips"><span class="chip" id="gPk" data-tip="Peak level of the kick going into the glue compressor, in dB.">Peak -</span><span class="chip" id="gGr" data-tip="Most gain reduction the glue compressor applied, in dB.">GR -</span></div>
-      <div class="ctl" id="ctlGlue3"></div>
       </div>
       <div id="renderView" hidden>
         <h2 style="margin:0">Render <small>The whole kick, ready to save</small></h2>
@@ -253,7 +254,7 @@ button.chip:hover{border-color:var(--selb)}
       </div>
     </section>
     <section class="panel" id="pSauce">
-      <h2>Sauce <small>Weight, punch, crack and loudness that make trance kicks hit hard. Amount 0 is off.</small></h2>
+      <h2>Sauce <small>Weight, punch, crack and loudness that make trance kicks hit hard. Amount 0 is off, and moving any knob below switches it on.</small></h2>
       <div class="ctl" id="ctlSauce1"></div><div class="ctl" id="ctlSauce2"></div><div class="ctl" id="ctlSauce3"></div><div class="ctl" id="ctlSauce4"></div>
     </section>
       <aside id="meterCol">
@@ -327,9 +328,9 @@ const SPEC=[
  {id:'gRel',label:'Release',min:5,max:400,unit:' ms',dec:0,def:35,log:1,tip:'How fast it lets go. Short brings the tail up between beats, long keeps it smooth.'},
  {id:'lim',label:'Limiter',min:0,max:1,unit:'',dec:0,def:0,tip:'Limiter on or off.'},
  {id:'limG',label:'Push',min:0,max:12,unit:' dB',dec:1,def:6,tip:'How hard the limiter is pushed. It raises the kick, then stops the peaks from growing, so the body gets louder and punchier.'},
- {id:'eMud',label:'Mud',min:0,max:100,unit:' %',dec:0,def:0,tip:'Cuts the boxy zone around 280 Hz, up to 6 dB. That is where kicks sound cardboard or cheap.'},
- {id:'eChest',label:'Chest',min:0,max:100,unit:' %',dec:0,def:0,tip:'Wide soft boost around 90 Hz, up to 4 dB. The part you feel in your chest.'},
- {id:'eShine',label:'Shine',min:0,max:100,unit:' %',dec:0,def:0,tip:'Presence boost around 5 kHz, up to 6 dB. Gives the click a modern sheen so it cuts through.'},
+ {id:'eMud',label:'Mud',min:0,max:100,unit:' %',dec:0,def:0,tip:'Cuts the boxy zone around 250 Hz, up to 12 dB. That is where kicks sound cardboard or cheap.'},
+ {id:'eChest',label:'Chest',min:0,max:100,unit:' %',dec:0,def:0,tip:'Wide boost around 80 Hz, up to 8 dB. The part you feel in your chest.'},
+ {id:'eShine',label:'Shine',min:0,max:100,unit:' %',dec:0,def:0,tip:'Boosts everything above 2.5 kHz, up to 15 dB. Brings out the click so the kick cuts through.'},
  {id:'out',label:'Output',min:-24,max:6,unit:' dB',dec:1,def:0,tip:'Output level in dB. Watch the meter on the right.'}
 ];
 const LK=[];
@@ -504,8 +505,13 @@ function peqRun(x,fs,f,q,gdb){
   const A=Math.pow(10,gdb/40),w=2*Math.PI*f/fs,al=Math.sin(w)/(2*q),c=Math.cos(w),a0=1+al/A;
   const b0=(1+al*A)/a0,b1=-2*c/a0,b2=(1-al*A)/a0,a1=-2*c/a0,a2=(1-al/A)/a0;let x1=0,x2=0,y1=0,y2=0;
   for(let i=0;i<x.length;i++){const v=x[i],y=b0*v+b1*x1+b2*x2-a1*y1-a2*y2;x2=x1;x1=v;y2=y1;y1=y;x[i]=y;}}
+function shelfRun(x,fs,f,gdb){
+  if(Math.abs(gdb)<0.05)return;
+  const A=Math.pow(10,gdb/40),w=2*Math.PI*f/fs,c=Math.cos(w),s=Math.sin(w),al=s/2*Math.SQRT2,sq=2*Math.sqrt(A)*al;
+  const a0=(A+1)-(A-1)*c+sq,b0=A*((A+1)+(A-1)*c+sq)/a0,b1=-2*A*((A-1)+(A+1)*c)/a0,b2=A*((A+1)+(A-1)*c-sq)/a0,a1=2*((A-1)-(A+1)*c)/a0,a2=((A+1)-(A-1)*c-sq)/a0;
+  let x1=0,x2=0,y1=0,y2=0;for(let i=0;i<x.length;i++){const v=x[i],y=b0*v+b1*x1+b2*x2-a1*y1-a2*y2;x2=x1;x1=v;y2=y1;y1=y;x[i]=y;}}
 function toneFx(x,fs,p){
-  peqRun(x,fs,280,1.2,-6*p.eMud/100);peqRun(x,fs,90,0.9,4*p.eChest/100);peqRun(x,fs,5000,0.7,6*p.eShine/100);}
+  peqRun(x,fs,250,0.9,-12*p.eMud/100);peqRun(x,fs,80,0.8,8*p.eChest/100);shelfRun(x,fs,2500,15*p.eShine/100);}
 const pkOfG=a=>{let m=1e-9;for(let i=0;i<a.length;i++){const v=Math.abs(a[i]);if(v>m)m=v;}return m;};
 let GL=null;
 function glueFx(x,fs,p){
@@ -713,12 +719,13 @@ function mkKnob(parent,id,sm){
   knobs[id]={ui};ui();
 }
 let dirty=true,flash=0,noteCache={},lastRef=0;
-function set(id,v){const s=S[id];v=clamp(v,s.min,s.max);const old=P[id];P[id]=v;if(knobs[id])knobs[id].ui();
+const SAUCE_IDS=['sPunch','sThump','sBloom','sCrack','sLoud'];
+function set(id,v){if(SAUCE_IDS.includes(id)&&P.sauce<=0&&S.sauce){P.sauce=100;if(knobs.sauce)knobs.sauce.ui();}const s=S[id];v=clamp(v,s.min,s.max);const old=P[id];P[id]=v;if(knobs[id])knobs[id].ui();
   if(P.env){if(id==='startHz')P.env[0][1]=P.startHz;else if(id==='tailHz')P.env[P.env.length-1][1]=P.tailHz;else if(id==='sweep'&&old>0){const E=P.env,n=E.length;let r=v/old;if(E[n-1][0]*r>100)r=100/E[n-1][0];let gap=1e9;for(let i=1;i<n;i++)gap=Math.min(gap,E[i][0]-E[i-1][0]);if(gap*r<1)r=1/gap;for(let i=1;i<n;i++)E[i][0]=Math.min(100,E[i][0]*r);}
     else if(id==='curve'&&old>0){const d=Math.log2(v/old)/2;P.env.forEach((a,i)=>{if(i<P.env.length-1)a[2]=clamp(a[2]+d,-1,1);});}
     envUi();}
   if(id==='tailHz')syncKey();dirty=true;presetEdited();}
-function limUi(){const b=document.getElementById('limBtn');if(b){b.textContent=P.lim?'On':'Off';b.classList.toggle('on',!!P.lim);}}
+function limUi(){const b=document.getElementById('limBtn');if(b){b.textContent=P.lim?'Limiter On':'Limiter Off';b.classList.toggle('on',!!P.lim);}}
 function envUi(){const b=document.getElementById('envReset');if(b)b.hidden=!P.env;}
 function group(parent,name){const g=document.createElement('div');g.className='grp';if(name)g.innerHTML=`<i>${name}</i>`;parent.appendChild(g);return g;}
 
@@ -747,9 +754,9 @@ function syncKey(){
   mkKnob(group($('#ctlSauce1'),'Master'),'sauce');
   {const gg=group($('#ctlGlue1'),'Glue');['sGlue','gThr','gRat'].forEach(i=>mkKnob(gg,i));
    const gt2=group($('#ctlGlue2'),'Timing');['gAtk','gRel'].forEach(i=>mkKnob(gt2,i));
-   const gl=group($('#ctlGlue3'),'Limiter');const cell=document.createElement('div');cell.className='cell';cell.innerHTML='<div class="kl">Power</div>';
-   const lb=document.createElement('button');lb.id='limBtn';lb.dataset.tip='Turn the limiter on or off. It pushes the kick louder without letting the peaks grow, a quick way to a punchy drum.';
-   lb.addEventListener('click',()=>{P.lim=P.lim?0:1;limUi();dirty=true;presetEdited();lb.blur();});cell.appendChild(lb);gl.appendChild(cell);mkKnob(gl,'limG');limUi();}
+   const lb=document.createElement('button');lb.id='limBtn';lb.className='chip';lb.dataset.tip='Turn the limiter on or off. It pushes the kick louder without letting the peaks grow, a quick way to a punchy drum.';
+   lb.addEventListener('click',()=>{P.lim=P.lim?0:1;limUi();dirty=true;presetEdited();lb.blur();});$('#glueChips').appendChild(lb);
+   mkKnob(group($('#ctlGlue2'),'Limiter'),'limG');limUi();}
   {const gt=group($('#ctlSauce4'),'Tone EQ');['eMud','eChest','eShine'].forEach(i=>mkKnob(gt,i));}
   {const gb=group($('#ctlSauce2'),'Low and body');['sThump','sBloom','sPunch'].forEach(i=>mkKnob(gb,i));}
   {const gl=group($('#ctlSauce3'),'Top and loudness');['sCrack','sLoud'].forEach(i=>mkKnob(gl,i));}
@@ -1199,6 +1206,7 @@ $('#kmP').onclick=()=>setKM(true);$('#kmS').onclick=()=>setKM(false);
 const mk=(name,tag,o)=>({name,tag,p:Object.assign({},o)});
 const D=()=>{const o={};SPEC.forEach(s=>o[s.id]=s.def);LK.forEach(k=>o[k]=k.endsWith('pol')?1:0);return o;};
 const FACTORY=[
+ mk('Trance Classic 138','trance',Object.assign(D(),{tailHz:48.999,startHz:1200,sweep:28,curve:0.9,clickLvl:55,clickFreq:4200,clickLen:4,body:100,sub:90,hold:14,decay:205,drive:40,trans:20,fuzz:10,clip:40,sauce:100,sPunch:70,sThump:65,sBloom:55,sCrack:50,sLoud:55,sGlue:45,gThr:-14,gRat:4,gAtk:30,gRel:100,lim:1,limG:4,eMud:45,eChest:30,eShine:25})),
  mk('Uplifting 138','uplifting',D()),
  mk('Dark Rolling','dark',Object.assign(D(),{tailHz:48.999,startHz:700,sweep:35,curve:1.1,clickLvl:35,clickFreq:2500,clickLen:3,body:70,sub:100,hold:14,decay:160,drive:25,trans:20,fuzz:0,clip:20})),
  mk('Punchy Click','punchy',Object.assign(D(),{tailHz:55,startHz:1000,sweep:24,curve:0.9,clickLvl:80,clickFreq:4500,clickLen:5,body:100,sub:70,hold:10,decay:120,drive:20,trans:10,fuzz:5,clip:30,l0src:3,l0lvl:35,l0len:20,l0hp:2000})),
@@ -1326,7 +1334,7 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)dirty=true
 /* ---------- start ---------- */
 try{bubbles=localStorage.getItem('kk-bub')!=='0';const l=localStorage.getItem('kk-look');if(l==='A'||l==='B')document.documentElement.dataset.look=l;}catch(e){}
 readCss();fitDefault();
-function boot(){buildPiano();setScale(defScale);nameUi();requestAnimationFrame(frame);}
+function boot(){load(FACTORY[0]);buildPiano();setScale(defScale);nameUi();requestAnimationFrame(frame);}
 if(document.fonts&&document.fonts.ready)document.fonts.ready.then(boot,boot);else boot();
 window.__kk={wavBlob:()=>wavBlob(),getGL:()=>GL,P,BANK,SRCN,renderKick,SPEC,FACTORY,spectrumDb,load,set,get sr(){return sr;},get buf(){return buf;},refresh};
 })();

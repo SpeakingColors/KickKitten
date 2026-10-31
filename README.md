@@ -29,3 +29,9 @@ The Sauce panel runs a chain inside the render: band split (sub below 110 Hz, bo
 ## v1.13
 - Render tab (next to Glue & limiter): Key, Vel, Generate, Export .wav, and a draggable waveform of the whole kick. Shows "out of date" when you change a knob after generating.
 - Layer Start knob is now 0 to 40 ms with 0.1 ms steps (was 0 to 200 ms), so you can trim the start of clicks precisely.
+
+## v1.14
+- Glue and limiter panel fits the window: Limiter On/Off moved next to the meter chips, Push sits with the timing knobs.
+- Tone EQ is much stronger (Mud up to -12 dB, Chest up to +8 dB, Shine shelf up to +15 dB above 2.5 kHz).
+- Moving any Sauce knob switches Sauce Amount on when it was 0.
+- New default preset "Trance Classic 138": about 1/8 note long, Sauce on, glue 30 ms attack, 4:1, limiter on. Starting point only, not verified against any commercial kick.
