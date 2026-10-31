@@ -1219,7 +1219,7 @@ const D=()=>{const o={};SPEC.forEach(s=>o[s.id]=s.def);LK.forEach(k=>o[k]=k.ends
 const SA=n=>SRCN.indexOf('Kick attack '+n),SC=n=>SRCN.indexOf('Kick click '+n);
 const TC=Object.assign(D(),{tailHz:55,startHz:900,sweep:30,curve:1,env:[[0,900,0],[4,464,0],[8,252,0],[16,208,0],[30,153,0],[50,110,0],[75,80,0],[100,55,0]],clickLvl:80,clickFreq:4800,clickLen:10,body:70,sub:90,hold:6,decay:280,ampShape:4.6,swell:30,drive:3,trans:0,fuzz:0,clip:2,sauce:60,sPunch:55,sThump:35,sBloom:0,sCrack:50,sLoud:10,sGlue:40,gThr:-10,gRat:4,gAtk:20,gRel:120,lim:0,limG:3,eMud:40,eChest:20,eShine:25});
 const FACTORY=[
- mk('Trance Classic 138','trance',TC),
+ mk('Trance Classic 138','trance',Object.assign({},TC,{clickLvl:10,drive:0,trans:0,fuzz:0,clip:0,sThump:25,sPunch:40,sCrack:35,sLoud:0,l0src:SA(45),l0lvl:50,l0len:40,l0hp:20,l1src:SC(45),l1lvl:30,l1len:40,l1hp:20})),
  mk("Trance Snap",'trance',Object.assign({},TC,{tailHz:56.8,env:[[0,900,0],[4,464,0],[8,252,0],[16,208,0],[30,158,0],[50,114,0],[75,83,0],[100,57,0]],decay:268,clickLvl:30,clickLen:6,l0src:SA(31),l0lvl:50,l0len:40,l0hp:20,l1src:SC(31),l1lvl:25,l1len:40,l1hp:20,l1delay:0})),
  mk("Trance Pop",'trance',Object.assign({},TC,{tailHz:53.3,env:[[0,900,0],[4,464,0],[8,252,0],[16,208,0],[30,148,0],[50,107,0],[75,78,0],[100,53,0]],decay:272,clickLvl:30,clickLen:4,l0src:SA(45),l0lvl:50,l0len:40,l0hp:20,l1src:SC(45),l1lvl:25,l1len:40,l1hp:20,l1delay:0})),
  mk("Trance Tick",'trance',Object.assign({},TC,{tailHz:52.2,env:[[0,900,0],[4,464,0],[8,252,0],[16,208,0],[30,145,0],[50,104,0],[75,76,0],[100,52,0]],decay:346,clickLvl:30,clickLen:10,l0src:SA(36),l0lvl:50,l0len:40,l0hp:20,l1src:SC(36),l1lvl:25,l1len:40,l1hp:20,l1delay:0})),
