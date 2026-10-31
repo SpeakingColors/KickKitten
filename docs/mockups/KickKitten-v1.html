@@ -2,7 +2,7 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
-/* Layout: one fixed-size plugin window (1380x946) scaled as a whole, wood cheeks left and right.
+/* Layout: one fixed-size plugin window (1640x946) scaled as a whole, wood cheeks left and right.
    Looks: C PurrOne (default), A Neon Navy, B Purple Soda Pop. All colours come from these tokens. */
 :root{
   --ground:#121214; --panel:#1b1b1e; --panel2:#242428; --display:#08080a; --line:#34343a;
@@ -35,7 +35,7 @@ body{margin:0;color:var(--text);font:13px/1.35 "Barlow Condensed","Arial Narrow"
   overflow-x:hidden}
 #stage{display:flex;justify-content:center;width:100%}
 #wrap{position:relative;flex:none}
-#win{position:absolute;left:0;top:0;width:1380px;height:946px;transform-origin:0 0;background:var(--ground);overflow:hidden;
+#win{position:absolute;left:0;top:0;width:1640px;height:946px;transform-origin:0 0;background:var(--ground);overflow:hidden;
   box-shadow:0 8px 30px #0008;user-select:none;-webkit-user-select:none}
 .cheek{position:absolute;top:0;width:52px;height:946px}
 .cheek.l{left:0}.cheek.r{right:0}
@@ -54,7 +54,7 @@ button.on{background:var(--sel);border-color:var(--selb)}
 .presetbar{display:flex;align-items:center;gap:4px;margin-left:auto}
 #pName{min-width:118px;text-align:left;font-weight:600;color:var(--read);font-family:"JetBrains Mono",monospace;font-size:12px}
 .hbtn{display:flex;gap:4px;margin-left:4px}
-#grid{flex:1;min-height:0;display:grid;grid-template-columns:1fr 330px 252px 56px;grid-template-rows:1fr 1fr;gap:8px}
+#grid{flex:1;min-height:0;display:grid;grid-template-columns:1fr 330px 252px 250px 56px;grid-template-rows:1fr 1fr;gap:8px}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 8px 6px;display:flex;flex-direction:column;min-width:0;min-height:0}
 .panel h2{margin:0 0 4px;font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--title)}
 .panel h2{position:relative}
@@ -82,13 +82,18 @@ button.chip{height:auto;background:var(--display);cursor:pointer}
 button.chip:hover{border-color:var(--selb)}
 .chips{display:flex;flex-wrap:wrap;gap:4px;margin:5px 0 0}
 .lbl{color:var(--cap);font-size:11px;letter-spacing:.08em;text-transform:uppercase}
-#meterCol{grid-column:4;grid-row:1/3;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 4px;display:flex;flex-direction:column;gap:4px;min-height:0}
+#meterCol{grid-column:5;grid-row:1/3;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 4px;display:flex;flex-direction:column;gap:4px;min-height:0}
 #meterCol h2{margin:0;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--title);text-align:center}
 #cvMeter{flex:1;min-height:0;width:100%;display:block}
 #pkRead{font:600 11px "JetBrains Mono",monospace;text-align:center;cursor:pointer;background:var(--display);border:1px solid var(--line);border-radius:3px;padding:1px 0}
 #pSauce{grid-column:3;grid-row:1/3;justify-content:space-around}
 #pSauce h2 small{display:block;margin:2px 0 0;line-height:1.25}
-#pSauce .ctl{justify-content:center}
+#pSauce .ctl,#pGlue .ctl{justify-content:center}
+#pGlue{grid-column:4;grid-row:1/3;justify-content:space-around}
+#pGlue h2 small{display:block;margin:2px 0 0;line-height:1.25}
+#pGlue canvas#cvGlue{flex:none;height:178px}
+#limBtn.on{background:var(--curve);color:var(--ground)}
+#cvWave{cursor:grab}
 #tops{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;height:138px;flex:none}
 .slot{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:4px 6px;display:flex;flex-direction:column;gap:3px;min-width:0}
 .slot.drag{border-color:var(--selb);background:var(--sel)}
@@ -205,8 +210,8 @@ button.chip:hover{border-color:var(--selb)}
         <div class="ctl" id="ctlSpec"></div>
       </section>
       <section class="panel" id="pWave" style="grid-column:1;grid-row:2">
-        <h2>Waveform &amp; layers <small id="waveSub"></small></h2>
-        <canvas id="cvWave" aria-label="Kick waveform with time ruler"></canvas>
+        <h2>Waveform &amp; layers <small id="waveSub"></small><button class="mini" id="expBtn" data-tip="Save the finished kick as a 24-bit mono .wav file on your computer. You can also drag the waveform straight into your DAW.">Export .wav</button></h2>
+        <canvas id="cvWave" draggable="true" aria-label="Kick waveform with time ruler. Drag it into your DAW to drop the kick as a .wav file." data-tip="Drag this waveform into your DAW or a folder to drop the kick as a .wav file. Or use Export .wav."></canvas>
         <div class="ctl" id="ctlWave"></div>
       </section>
       <section class="panel" id="pOut" style="grid-column:2;grid-row:2">
@@ -215,8 +220,15 @@ button.chip:hover{border-color:var(--selb)}
         <div class="chips" id="chips"></div>
         <div class="ctl" id="ctlOut"></div>
       </section>
+    <section class="panel" id="pGlue">
+      <h2>Glue &amp; limiter <small>A compressor blended under the kick, then an optional limiter. Watch the meter.</small></h2>
+      <div class="ctl" id="ctlGlue1"></div><div class="ctl" id="ctlGlue2"></div>
+      <canvas id="cvGlue" aria-label="Glue compressor meter: level and gain reduction in dB over time"></canvas>
+      <div class="chips" id="glueChips"><span class="chip" id="gPk" data-tip="Peak level of the kick going into the glue compressor, in dB.">Peak -</span><span class="chip" id="gGr" data-tip="Most gain reduction the glue compressor applied, in dB.">GR -</span></div>
+      <div class="ctl" id="ctlGlue3"></div>
+    </section>
     <section class="panel" id="pSauce">
-      <h2>Sauce <small>The glue, punch and loudness that make trance kicks hit hard. Amount 0 is off.</small></h2>
+      <h2>Sauce <small>Weight, punch, crack and loudness that make trance kicks hit hard. Amount 0 is off.</small></h2>
       <div class="ctl" id="ctlSauce1"></div><div class="ctl" id="ctlSauce2"></div><div class="ctl" id="ctlSauce3"></div><div class="ctl" id="ctlSauce4"></div>
     </section>
       <aside id="meterCol">
@@ -255,7 +267,7 @@ button.chip:hover{border-color:var(--selb)}
 'use strict';
 const $=s=>document.querySelector(s);
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
-const W=1380,H=946;
+const W=1640,H=946;
 const NOTE=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 function hz2note(f){const n=12*Math.log2(f/440)+69,r=Math.round(n);return{name:NOTE[((r%12)+12)%12]+(Math.floor(r/12)-1),cents:(n-r)*100};}
 const KEYS=[];for(let m=23;m<=39;m++)KEYS.push([NOTE[m%12]+(Math.floor(m/12)-1),440*Math.pow(2,(m-69)/12)]);
@@ -282,8 +294,14 @@ const SPEC=[
  {id:'sThump',label:'Thump',min:0,max:100,unit:' %',dec:0,def:60,tip:'Saturates the sub below 120 Hz so the low note grows harmonics at 2 and 3 times its pitch. Gives weight you can hear on laptop speakers, and a little more low level.'},
  {id:'sBloom',label:'Bloom',min:0,max:100,unit:' %',dec:0,def:50,tip:'A soft swell in the low tail at about 40 to 80 ms. Makes the kick breathe and pump, so the tail lifts after the hit instead of just dying away.'},
  {id:'sCrack',label:'Crack',min:0,max:100,unit:' %',dec:0,def:40,tip:'Lifts and rounds the top band above 800 Hz, strongest in the first 10 ms. Sharper attack that cuts through a full mix.'},
- {id:'sGlue',label:'Glue',min:0,max:100,unit:' %',dec:0,def:50,tip:'Heavy parallel compression blended under the kick. Attack 10 ms lets the click through, release 35 ms, ratio 6 to 1. Fills the gaps in the tail so the kick feels thick and solid.'},
+ {id:'sGlue',label:'Mix',min:0,max:100,unit:' %',dec:0,def:0,tip:'How much of the glue compressor is blended in. 0 is off. Shape it with Threshold, Ratio, Attack and Release. Works even when Sauce Amount is 0. Fills the gaps in the tail so the kick feels thick and solid.'},
  {id:'sLoud',label:'Loud',min:0,max:100,unit:' %',dec:0,def:60,tip:'Makes the kick denser and louder while the peak stays the same: up to 6 dB more average level, with the peaks shaved smoothly instead of hard clipped.'},
+ {id:'gThr',label:'Thresh',min:-30,max:-1,unit:' dB',dec:1,def:-12,tip:'Where the glue compressor starts working, in dB below the kick peak. Lower means more of the kick gets squeezed.'},
+ {id:'gRat',label:'Ratio',min:1.5,max:20,unit:':1',dec:1,def:6,log:1,tip:'How hard it squeezes above the threshold. 2 is gentle, 6 is firm, 20 is almost a limiter.'},
+ {id:'gAtk',label:'Attack',min:1,max:100,unit:' ms',dec:1,def:10,log:1,tip:'How slowly the compressor grabs. Longer lets more of the click and punch through first. Try 30 to 50 ms for a hard punch.'},
+ {id:'gRel',label:'Release',min:5,max:400,unit:' ms',dec:0,def:35,log:1,tip:'How fast it lets go. Short brings the tail up between beats, long keeps it smooth.'},
+ {id:'lim',label:'Limiter',min:0,max:1,unit:'',dec:0,def:0,tip:'Limiter on or off.'},
+ {id:'limG',label:'Push',min:0,max:12,unit:' dB',dec:1,def:6,tip:'How hard the limiter is pushed. It raises the kick, then stops the peaks from growing, so the body gets louder and punchier.'},
  {id:'eMud',label:'Mud',min:0,max:100,unit:' %',dec:0,def:0,tip:'Cuts the boxy zone around 280 Hz, up to 6 dB. That is where kicks sound cardboard or cheap.'},
  {id:'eChest',label:'Chest',min:0,max:100,unit:' %',dec:0,def:0,tip:'Wide soft boost around 90 Hz, up to 4 dB. The part you feel in your chest.'},
  {id:'eShine',label:'Shine',min:0,max:100,unit:' %',dec:0,def:0,tip:'Presence boost around 5 kHz, up to 6 dB. Gives the click a modern sheen so it cuts through.'},
@@ -446,7 +464,7 @@ function envF(e,t){
 function validEnv(e){
   if(!Array.isArray(e)||e.length<2||e.length>8)return null;
   const o=[];for(const a of e){if(!Array.isArray(a)||a.length!==3||!a.every(Number.isFinite))return null;o.push([clamp(a[0],0,100),clamp(a[1],20,4000),clamp(a[2],-1,1)]);}
-  o[0][0]=0;for(let i=1;i<o.length;i++)if(o[i][0]<=o[i-1][0]+0.5)return null;
+  for(let i=1;i<o.length;i++)if(o[i][0]<=o[i-1][0]+0.5)return null;
   return o;}
 function legacyToEnv(){
   const sw=P.sweep,tl=P.tailHz,st=P.startHz,c=P.curve,fe=t=>tl+(st-tl)*Math.exp(-3*Math.pow(t/sw,c));
@@ -463,9 +481,30 @@ function peqRun(x,fs,f,q,gdb){
   for(let i=0;i<x.length;i++){const v=x[i],y=b0*v+b1*x1+b2*x2-a1*y1-a2*y2;x2=x1;x1=v;y2=y1;y1=y;x[i]=y;}}
 function toneFx(x,fs,p){
   peqRun(x,fs,280,1.2,-6*p.eMud/100);peqRun(x,fs,90,0.9,4*p.eChest/100);peqRun(x,fs,5000,0.7,6*p.eShine/100);}
+const pkOfG=a=>{let m=1e-9;for(let i=0;i<a.length;i++){const v=Math.abs(a[i]);if(v>m)m=v;}return m;};
+let GL=null;
+function glueFx(x,fs,p){
+  const N=x.length,w=p.sGlue/100,pk0=pkOfG(x),thr=pk0*Math.pow(10,p.gThr/20);
+  const ca=Math.exp(-1/(p.gAtk/1000*fs)),cr=Math.exp(-1/(p.gRel/1000*fs)),ex=1-1/p.gRat;
+  const nb=150,bin=Math.max(1,Math.floor(fs/1000)),lv=new Float32Array(nb).fill(1e-6),gr=new Float32Array(nb).fill(1);
+  let env=0;const y=new Float32Array(N);
+  for(let i=0;i<N;i++){const a=Math.abs(x[i]);env=a>env?ca*env+(1-ca)*a:cr*env+(1-cr)*a;
+    const g=env>thr?Math.pow(thr/env,ex):1,ge=1-w+w*g;y[i]=x[i]*ge;
+    const b=(i/bin)|0;if(b<nb){if(a>lv[b])lv[b]=a;if(ge<gr[b])gr[b]=ge;}}
+  if(w>0){const sc=pk0/pkOfG(y);for(let i=0;i<N;i++)x[i]=y[i]*sc;}
+  if(p===P){const db=v=>20*Math.log10(Math.max(v,1e-6));let mg=0;const g2=Array.from(gr,db),l2=Array.from(lv,db);g2.forEach(v=>{if(v<mg)mg=v;});
+    GL={nb,lv:l2,gr:g2,thr:db(thr),pk:db(pk0),mg:w>0?mg:0,on:w>0};}}
+function limiterFx(x,fs,p){
+  if(!p.lim)return;
+  const N=x.length,G=Math.pow(10,p.limG/20),ceil=pkOfG(x),L=Math.max(2,Math.round(0.0015*fs)),cr=Math.exp(-1/((p.limRel||8)/1000*fs));
+  const r=new Float32Array(N);for(let i=0;i<N;i++){const a=Math.abs(x[i])*G;r[i]=a>ceil?ceil/a:1;}
+  const gm=new Float32Array(N);for(let i=0;i<N;i++){let m=1;const e=Math.min(N,i+L);for(let j=i;j<e;j++)if(r[j]<m)m=r[j];gm[i]=m;}
+  const gs=new Float32Array(N);let prev=1;for(let i=0;i<N;i++){const v=gm[i];prev=v<prev?v:prev+(v-prev)*(1-cr);gs[i]=prev;}
+  let acc=0;const q=new Float64Array(N+1);for(let i=0;i<N;i++)q[i+1]=q[i]+gs[i];
+  for(let i=0;i<N;i++){const s=Math.max(0,i-L+1);const g=(q[i+1]-q[s]+(L-(i+1-s))*1)/L;x[i]=x[i]*G*Math.min(g,r[i]);}}
 function sauceFx(x,fs,p){
   const A=p.sauce/100;if(A<=0)return;
-  const N=x.length,k=n=>p[n]/100*A,kP=k('sPunch'),kT=k('sThump'),kB=k('sBloom'),kC=k('sCrack'),kG=k('sGlue'),kL=k('sLoud');
+  const N=x.length,k=n=>p[n]/100*A,kP=k('sPunch'),kT=k('sThump'),kB=k('sBloom'),kC=k('sCrack'),kL=k('sLoud');
   const lp4=(a,f)=>{const q1=bqMake('lp',f,fs),q2=bqMake('lp',f,fs);for(let i=0;i<a.length;i++)a[i]=bqRun(q2,bqRun(q1,a[i]));return a;};
   const pkOf=a=>{let m=1e-9;for(let i=0;i<a.length;i++){const v=Math.abs(a[i]);if(v>m)m=v;}return m;};
   const sat=(a,d)=>{const pk=pkOf(a),td=Math.tanh(d);for(let i=0;i<a.length;i++)a[i]=Math.tanh(d*a[i]/pk)*pk/td;};
@@ -474,23 +513,16 @@ function sauceFx(x,fs,p){
   const low=lp4(Float32Array.from(x),110),rest=new Float32Array(N);for(let i=0;i<N;i++)rest[i]=x[i]-low[i];
   const mid=lp4(Float32Array.from(rest),800),high=new Float32Array(N);for(let i=0;i<N;i++)high[i]=rest[i]-mid[i];
   const sm=Float32Array.from(mid),sl=Float32Array.from(low),sh=Float32Array.from(high);
-  sat(sm,4);sat(sl,2.4);sat(sh,2.2);
+  sat(sm,7);sat(sl,4.5);sat(sh,4);
   const y=new Float32Array(N);
   for(let i=0;i<N;i++){const t=i/fs;
-    const bl=1+kB*0.9*Math.exp(-Math.pow((t-0.06)/0.032,2));
-    const lo=(low[i]*(1-kT)+sl[i]*kT*1.1)*(1+0.2*kT)*bl;
+    const bl=1+kB*1.6*Math.exp(-Math.pow((t-0.06)/0.04,2));
+    const lo=(low[i]*(1-kT)+sl[i]*kT*1.25)*(1+0.35*kT)*bl;
     const mi=mid[i]*(1-kP)+sm[i]*kP*1.12;
-    const hi=(high[i]*(1-kC)+sh[i]*kC)*(1+kC*(0.5+1.2*Math.exp(-t/0.006)));
+    const hi=(high[i]*(1-kC)+sh[i]*kC)*(1+kC*(0.8+2.4*Math.exp(-t/0.006)));
     y[i]=lo+mi+hi;}
-  if(kG>0){
-    const thr=0.22*pkOf(y),ca=Math.exp(-1/(0.010*fs)),cr=Math.exp(-1/(0.035*fs));let env=0;
-    const cmp=new Float32Array(N);let ry=0,rc=0;
-    for(let i=0;i<N;i++){const a=Math.abs(y[i]);env=a>env?ca*env+(1-ca)*a:cr*env+(1-cr)*a;
-      const g=env>thr?Math.pow(thr/env,1-1/6):1;cmp[i]=y[i]*g;if(i<m){ry+=y[i]*y[i];rc+=cmp[i]*cmp[i];}}
-    const mk=rc>1e-12?Math.sqrt(ry/rc):1,w=0.65*kG;
-    for(let i=0;i<N;i++)y[i]=y[i]*(1-w)+cmp[i]*mk*w;}
   if(kL>0){
-    const gain=Math.pow(10,6*kL/20),kn=0.5*pk0,cl=0.95*pk0;
+    const gain=Math.pow(10,9*kL/20),kn=0.5*pk0,cl=0.95*pk0;
     for(let i=0;i<N;i++){const v=y[i]*gain,a=Math.abs(v);y[i]=a<kn?v:Math.sign(v)*(kn+(cl-kn)*Math.tanh((a-kn)/(cl-kn)));}}
   const pk1=pkOf(y),sc=pk0/pk1;
   for(let i=0;i<N;i++)x[i]=y[i]*sc;
@@ -536,7 +568,9 @@ function renderKick(p,sr){
     for(let i=0;i<N;i++)x[i]=y[i]*mk;
   }
   sauceFx(x,fs,p);
+  glueFx(x,fs,p);
   toneFx(x,fs,p);
+  limiterFx(x,fs,p);
   // clip (smooth, normalised so full scale stays full scale) and DC block
   const c=p.clip/100,gc=1+3*c,tg=Math.tanh(gc),R=1-twoPi*8/fs;
   let px=0,py=0;
@@ -653,12 +687,13 @@ function mkKnob(parent,id,sm){
     if(d){e.preventDefault();set(id,n2v(s,clamp(v2n(s,P[id])+d*(e.shiftKey?0.002:0.01),0,1)));}});
   knobs[id]={ui};ui();
 }
-let dirty=true,flash=0,noteCache={};
+let dirty=true,flash=0,noteCache={},lastRef=0;
 function set(id,v){const s=S[id];v=clamp(v,s.min,s.max);const old=P[id];P[id]=v;if(knobs[id])knobs[id].ui();
   if(P.env){if(id==='startHz')P.env[0][1]=P.startHz;else if(id==='tailHz')P.env[P.env.length-1][1]=P.tailHz;else if(id==='sweep'&&old>0){const E=P.env,n=E.length;let r=v/old;if(E[n-1][0]*r>100)r=100/E[n-1][0];let gap=1e9;for(let i=1;i<n;i++)gap=Math.min(gap,E[i][0]-E[i-1][0]);if(gap*r<1)r=1/gap;for(let i=1;i<n;i++)E[i][0]=Math.min(100,E[i][0]*r);}
     else if(id==='curve'&&old>0){const d=Math.log2(v/old)/2;P.env.forEach((a,i)=>{if(i<P.env.length-1)a[2]=clamp(a[2]+d,-1,1);});}
     envUi();}
   if(id==='tailHz')syncKey();dirty=true;presetEdited();}
+function limUi(){const b=document.getElementById('limBtn');if(b){b.textContent=P.lim?'On':'Off';b.classList.toggle('on',!!P.lim);}}
 function envUi(){const b=document.getElementById('envReset');if(b)b.hidden=!P.env;}
 function group(parent,name){const g=document.createElement('div');g.className='grp';if(name)g.innerHTML=`<i>${name}</i>`;parent.appendChild(g);return g;}
 
@@ -685,9 +720,14 @@ function syncKey(){
   const g6=group($('#ctlSpec'),'Purr Trio');['drive','trans','fuzz'].forEach(i=>mkKnob(g6,i));
   const g7=group($('#ctlSpec'));mkKnob(g7,'clip');
   mkKnob(group($('#ctlSauce1'),'Master'),'sauce');
+  {const gg=group($('#ctlGlue1'),'Glue');['sGlue','gThr','gRat'].forEach(i=>mkKnob(gg,i));
+   const gt2=group($('#ctlGlue2'),'Timing');['gAtk','gRel'].forEach(i=>mkKnob(gt2,i));
+   const gl=group($('#ctlGlue3'),'Limiter');const cell=document.createElement('div');cell.className='cell';cell.innerHTML='<div class="kl">Power</div>';
+   const lb=document.createElement('button');lb.id='limBtn';lb.dataset.tip='Turn the limiter on or off. It pushes the kick louder without letting the peaks grow, a quick way to a punchy drum.';
+   lb.addEventListener('click',()=>{P.lim=P.lim?0:1;limUi();dirty=true;presetEdited();lb.blur();});cell.appendChild(lb);gl.appendChild(cell);mkKnob(gl,'limG');limUi();}
   {const gt=group($('#ctlSauce4'),'Tone EQ');['eMud','eChest','eShine'].forEach(i=>mkKnob(gt,i));}
   {const gb=group($('#ctlSauce2'),'Low and body');['sThump','sBloom','sPunch'].forEach(i=>mkKnob(gb,i));}
-  {const gl=group($('#ctlSauce3'),'Top and loudness');['sCrack','sGlue','sLoud'].forEach(i=>mkKnob(gl,i));}
+  {const gl=group($('#ctlSauce3'),'Top and loudness');['sCrack','sLoud'].forEach(i=>mkKnob(gl,i));}
   const g8=group($('#ctlOut'));mkKnob(g8,'out');
   const pb=document.createElement('div');pb.className='cell';
   pb.innerHTML='<div class="kl">Polarity</div>';
@@ -769,7 +809,7 @@ function setLook(l){document.documentElement.dataset.look=l==='C'?'':l;if(l==='C
 
 /* ---------- canvases / scaling ---------- */
 let scale=1,defScale=1;
-const cvs=['cvPitch','cvSpec','cvWave','cvGap','cvMeter','lw0','lw1','lw2','cheekL','cheekR'].map(i=>document.getElementById(i));
+const cvs=['cvPitch','cvSpec','cvWave','cvGap','cvMeter','cvGlue','lw0','lw1','lw2','cheekL','cheekR'].map(i=>document.getElementById(i));
 function sizeCanvas(c){
   const isCheek=c.classList.contains('cheek');
   const w=isCheek?52:c.offsetWidth,h=isCheek?H:c.offsetHeight,k=scale*(window.devicePixelRatio||1);
@@ -839,22 +879,21 @@ function drawPitch(){
     const x=fx(ms,gm),y=fy(clamp(f,20,4000),gm);i?g.lineTo(x,y):g.moveTo(x,y);}
   g.stroke();g.lineWidth=1;
   // dots
-  const f1=P.tailHz+(P.startHz-P.tailHz)*Math.exp(-3);
-  const dots=E?E.map(a=>[a[0],a[1]]):[[0,P.startHz],[P.sweep,f1]];
+  const dots=(E||legacyToEnv()).map(a=>[a[0],a[1]]);
   dots.forEach((d,k)=>{const x=fx(d[0],gm),y=fy(clamp(d[1],20,4000),gm);
     g.fillStyle=CSS.ground;g.strokeStyle=(drag&&drag.k===k)?CSS.read:CSS.curve;g.lineWidth=2;g.beginPath();g.arc(x,y,6,0,7);g.fill();g.stroke();g.lineWidth=1;
     const nn=hz2note(d[1]),cr=Math.round(nn.cents),lab=`${d[1].toFixed(d[1]<100?1:0)} Hz ${nn.name}${cr?` ${cr>0?'+':''}${cr}`:''}`;
     const right=x<gm.r-120;txt(g,lab,right?x+10:x-10,y+(k===0?3:-9),CSS.read,right?'left':'right');
-    if(k>0&&E)txt(g,`${d[0].toFixed(1)} ms`,right?x+10:x-10,y+4,CSS.cap,right?'left':'right');});
+    if(k>0||d[0]>0)txt(g,`${d[0].toFixed(1)} ms`,right?x+10:x-10,y+4,CSS.cap,right?'left':'right');});
 }
 let drag=null;
 (function(){
   const c=$('#cvPitch');
   const pos=e=>{const r=c.getBoundingClientRect();return{x:(e.clientX-r.left)/r.width*c._w,y:(e.clientY-r.top)/r.height*c._h};};
   const toHz=(y,gm)=>20*Math.pow(200,1-(y-gm.t)/(gm.b-gm.t)),toMs=(x,gm)=>(x-gm.l)/(gm.r-gm.l)*100;
-  const dotsNow=()=>P.env?P.env.map(a=>[a[0],a[1]]):[[0,P.startHz],[P.sweep,P.tailHz+(P.startHz-P.tailHz)*Math.exp(-3)]];
+  const dotsNow=()=>(P.env||legacyToEnv()).map(a=>[a[0],a[1]]);
   function hit(p){const gm=pitchGeom(c),d=dotsNow();
-    for(let k=d.length-1;k>=0;k--)if(Math.hypot(p.x-fx(d[k][0],gm),p.y-fy(clamp(d[k][1],20,4000),gm))<11)return{type:'dot',k};
+    for(let k=d.length-1;k>=0;k--)if(Math.hypot(p.x-fx(d[k][0],gm),p.y-fy(clamp(d[k][1],20,4000),gm))<14)return{type:'dot',k};
     if(!P.env&&Math.abs(p.y-fy(P.tailHz,gm))<7&&p.x>=gm.l&&p.x<=gm.r)return{type:'tail'};
     if(p.x>=gm.l&&p.x<=gm.r){const ms=toMs(p.x,gm);let f;
       if(P.env)f=envF(P.env,ms);else f=P.tailHz+(P.startHz-P.tailHz)*Math.exp(-3*Math.pow(ms/P.sweep,P.curve));
@@ -866,23 +905,22 @@ let drag=null;
   c.addEventListener('pointermove',e=>{const p=pos(e),gm=pitchGeom(c);
     if(drag){
       if(drag.type==='tail'){set('tailHz',toHz(p.y,gm));}
-      else if(drag.type==='dot'){const k=drag.k;
-        if(!P.env){ if(k===0)set('startHz',toHz(p.y,gm));else set('sweep',toMs(p.x,gm)); }
-        else{const E=P.env,n=E.length;let ms=k===0?0:clamp(toMs(p.x,gm),E[k-1][0]+1,k<n-1?E[k+1][0]-1:100),hz=toHz(p.y,gm);
-          if(k===0){set('startHz',hz);}else if(k===n-1){E[k][0]=ms;set('tailHz',hz);}else{E[k][0]=ms;E[k][1]=clamp(hz,20,4000);dirty=true;presetEdited();}}}
+      else if(drag.type==='dot'&&P.env){const k=drag.k,E=P.env,n=E.length;
+        const ms=clamp(toMs(p.x-drag.ox,gm),k===0?0:E[k-1][0]+1,k<n-1?E[k+1][0]-1:100),hz=toHz(p.y-drag.oy,gm);
+        E[k][0]=ms;if(k===0)set('startHz',hz);else if(k===n-1)set('tailHz',hz);else{E[k][1]=clamp(hz,20,4000);dirty=true;presetEdited();}}
       else if(drag.type==='seg'&&P.env){const E=P.env,a=E[drag.i],b=E[drag.i+1],u=(toMs(p.x,gm)-a[0])/(b[0]-a[0]);
         const fy_=toHz(p.y,gm),v=(Math.log(fy_)-Math.log(a[1]))/(Math.log(b[1])-Math.log(a[1]));
         if(u>0.08&&u<0.92&&isFinite(v)&&v>0.02&&v<0.98&&Math.abs(Math.log(b[1]/a[1]))>0.05){a[2]=clamp(Math.log2(Math.log(v)/Math.log(u))/2,-1,1);dirty=true;presetEdited();}}
-      return;}
+      drawPitch();return;}
     const h=hit(p);c.style.cursor=!h?'default':h.type==='seg'?'ns-resize':h.type==='tail'?'ns-resize':'grab';});
   c.addEventListener('pointerdown',e=>{const p=pos(e),h=hit(p);if(!h)return;
     if(h.type==='seg'){ensure();const q=pos(e),gm=pitchGeom(c),ms=toMs(q.x,gm);let i=0;for(let k=0;k<P.env.length-1;k++)if(ms>=P.env[k][0])i=k;drag={type:'seg',i};}
-    else if(h.type==='dot'){if(P.env||h.k===0||h.k===1){drag={type:'dot',k:h.k};}}else drag=h;
+    else if(h.type==='dot'){ensure();const gm=pitchGeom(c),e0=P.env[h.k];drag={type:'dot',k:h.k,ox:p.x-fx(e0[0],gm),oy:p.y-fy(clamp(e0[1],20,4000),gm)};}else drag=h;
     if(drag){drag.k=h.k;c.setPointerCapture(e.pointerId);}});
-  c.addEventListener('pointerup',()=>{drag=null;});
+  c.addEventListener('pointerup',()=>{drag=null;dirty=true;});
   c.addEventListener('dblclick',e=>{const p=pos(e),gm=pitchGeom(c),h=hit(p);
     if(h&&h.type==='dot'){
-      if(!P.env){if(h.k===0)set('startHz',S.startHz.def);else set('sweep',S.sweep.def);return;}
+      ensure();
       const E=P.env,n=E.length;
       if(h.k===0)set('startHz',S.startHz.def);else if(h.k===n-1)set('tailHz',S.tailHz.def);
       else{E.splice(h.k,1);dirty=true;presetEdited();}
@@ -895,6 +933,17 @@ let drag=null;
     E.splice(k,0,[ms,clamp(toHz(p.y,gm),20,4000),0]);dirty=true;presetEdited();});
   $('#envReset').addEventListener('click',()=>{P.env=null;envUi();dirty=true;presetEdited();});
 })();
+
+/* ---------- export: 24-bit mono wav, save button and drag into the DAW ---------- */
+function wavBlob(){
+  const n=buf.length,bytes=new ArrayBuffer(44+n*3),v=new DataView(bytes),w=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i));};
+  w(0,'RIFF');v.setUint32(4,36+n*3,true);w(8,'WAVEfmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,sr,true);v.setUint32(28,sr*3,true);v.setUint16(32,3,true);v.setUint16(34,24,true);w(36,'data');v.setUint32(40,n*3,true);
+  for(let i=0;i<n;i++){let s=Math.round(clamp(buf[i],-1,1)*8388607);if(s<0)s+=16777216;const o=44+i*3;v.setUint8(o,s&255);v.setUint8(o+1,(s>>8)&255);v.setUint8(o+2,(s>>16)&255);}
+  return new Blob([bytes],{type:'audio/wav'});}
+function wavName(){const c=getCur();const nm=((c?c.name:'Kick').replace(/[^A-Za-z0-9 #-]/g,'').trim().replace(/\s+/g,'_'))||'Kick';return `KickKitten_${nm}_${hz2note(P.tailHz).name.replace('#','s')}.wav`;}
+$('#expBtn').addEventListener('click',()=>{if(dirty){dirty=false;refresh();}const u=URL.createObjectURL(wavBlob()),a=document.createElement('a');a.href=u;a.download=wavName();document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);$('#expBtn').blur();});
+$('#cvWave').addEventListener('dragstart',e=>{if(dirty){dirty=false;refresh();}const u=URL.createObjectURL(wavBlob());
+  try{e.dataTransfer.setData('DownloadURL','audio/wav:'+wavName()+':'+u);e.dataTransfer.effectAllowed='copy';}catch(_){}setTimeout(()=>URL.revokeObjectURL(u),60000);});
 
 function drawWave(){
   const c=$('#cvWave'),g=clearC(c),l=40,r=c._w-10,t=24,b=c._h-20,mid=(t+b)/2;
@@ -970,6 +1019,22 @@ function drawGap(){
 /* meter */
 let lvl=-99,hold=-99,holdT=0,clipLatch=false,minDb=-48,maxDb=3;
 function db2y(d,c){return 4+(1-(clamp(d,minDb,maxDb)-minDb)/(maxDb-minDb))*(c._h-8);}
+function drawGlue(){
+  const c=$('#cvGlue');if(!c||!c._w||!GL)return;const g=clearC(c),l=30,r=c._w-6,w=r-l,nb=GL.nb;
+  const t1=6,b1=Math.round(c._h*0.52),t2=b1+16,b2=c._h-16,X=i=>l+i/nb*w;
+  const Y1=d=>t1+clamp(-d,0,36)/36*(b1-t1),Y2=d=>t2+clamp(-d,0,12)/12*(b2-t2);
+  g.lineWidth=1;g.strokeStyle=CSS.grid;
+  [0,-12,-24].forEach(d=>{const y=Y1(d);g.beginPath();g.moveTo(l,y);g.lineTo(r,y);g.stroke();txt(g,d,l-4,y+3,CSS.cap,'right');});
+  [0,-3,-6,-9,-12].forEach(d=>{const y=Y2(d);g.beginPath();g.moveTo(l,y);g.lineTo(r,y);g.stroke();txt(g,d,l-4,y+3,CSS.cap,'right');});
+  for(let ms=0;ms<=150;ms+=50){const x=X(ms);g.beginPath();g.moveTo(x,t2);g.lineTo(x,b2);g.stroke();txt(g,ms,x,b2+11,CSS.cap,'center');}
+  txt(g,'dB',2,t1+8,CSS.cap,'left');txt(g,'GR',2,t2-5,CSS['c-body'],'left');txt(g,'ms',l-4,b2+11,CSS.cap,'right');
+  g.fillStyle=CSS.curve;g.globalAlpha=.35;g.beginPath();g.moveTo(l,Y1(-36));
+  for(let i=0;i<nb;i++)g.lineTo(X(i),Y1(GL.lv[i]-GL.pk));g.lineTo(r,Y1(-36));g.closePath();g.fill();g.globalAlpha=1;
+  g.strokeStyle=CSS.curve;g.lineWidth=1.5;g.beginPath();for(let i=0;i<nb;i++){const x=X(i),y=Y1(GL.lv[i]-GL.pk);i?g.lineTo(x,y):g.moveTo(x,y);}g.stroke();
+  const yt=Y1(GL.thr-GL.pk);g.strokeStyle=CSS.read;g.setLineDash([4,3]);g.beginPath();g.moveTo(l,yt);g.lineTo(r,yt);g.stroke();g.setLineDash([]);
+  txt(g,'threshold',r-2,yt-3,CSS.read,'right');
+  g.fillStyle=CSS['c-body'];g.globalAlpha=.8;for(let i=0;i<nb;i++){const h=Y2(GL.gr[i])-t2;if(h>0.5)g.fillRect(X(i),t2,Math.max(1,w/nb),h);}g.globalAlpha=1;
+  $('#gPk').textContent='Peak '+GL.pk.toFixed(1)+' dB';$('#gGr').textContent=GL.on?'GR '+GL.mg.toFixed(1)+' dB':'GR off';}
 function drawMeter(){
   const c=$('#cvMeter'),g=clearC(c),x0=26,bw=c._w-x0-6;
   [0,-6,-12,-18,-24,-36,-48].forEach(d=>{const y=db2y(d,c);g.strokeStyle=CSS.line;g.beginPath();g.moveTo(x0-4,y);g.lineTo(x0,y);g.stroke();txt(g,d,x0-6,y+3,CSS.cap,'right','9px "JetBrains Mono",monospace');});
@@ -997,10 +1062,10 @@ function refresh(){
   const t0=performance.now();
   noteCache={};buf=renderKick(P,sr);mags=spectrumDb(buf,sr);
   if(ctx){const ab=ctx.createBuffer(1,buf.length,sr);ab.copyToChannel(buf,0);curBuf=ab;}
-  updateChips();drawPitch();drawWave();drawSpec();drawGap();drawLayers();
+  updateChips();drawPitch();drawGlue();drawWave();drawSpec();drawGap();drawLayers();
   window.__renderMs=performance.now()-t0;
 }
-function redrawAll(){if(buf.length>1){drawPitch();drawWave();drawSpec();drawGap();drawLayers();drawMeter();}}
+function redrawAll(){if(buf.length>1){drawPitch();drawGlue();drawWave();drawSpec();drawGap();drawLayers();drawMeter();}}
 
 /* ---------- main loop (paused when hidden) ---------- */
 let visible=true;
@@ -1008,7 +1073,7 @@ new IntersectionObserver(es=>{visible=es[0].isIntersecting;}).observe($('#win'))
 function frame(){
   requestAnimationFrame(frame);
   if(document.hidden||!visible)return;
-  if(dirty){dirty=false;refresh();}
+  if(dirty&&!(drag&&performance.now()-lastRef<80)){dirty=false;lastRef=performance.now();refresh();}
   let pk=0;
   if(analyser){analyser.getFloatTimeDomainData(tbuf);for(let i=0;i<tbuf.length;i++){const a=Math.abs(tbuf[i]);if(a>pk)pk=a;}}
   const d=pk>0.00003?20*Math.log10(pk):-99;
@@ -1079,10 +1144,10 @@ const FACTORY=[
  mk('Punchy Click','punchy',Object.assign(D(),{tailHz:55,startHz:1000,sweep:24,curve:0.9,clickLvl:80,clickFreq:4500,clickLen:5,body:100,sub:70,hold:10,decay:120,drive:20,trans:10,fuzz:5,clip:30,l0src:3,l0lvl:35,l0len:20,l0hp:2000})),
  mk('Subby Deep','sub',Object.assign(D(),{tailHz:46.249,startHz:600,sweep:40,curve:1.3,clickLvl:25,clickFreq:2000,clickLen:3,body:55,sub:100,hold:15,decay:190,drive:8,trans:0,fuzz:0,clip:10})),
  mk('Hard Dance','hard',Object.assign(D(),{tailHz:61.735,startHz:1200,sweep:22,curve:0.8,clickLvl:90,clickFreq:5000,clickLen:6,body:100,sub:80,hold:10,decay:110,drive:45,trans:30,fuzz:20,clip:55,l0src:4,l0lvl:30,l0len:20,l0hp:1500,l1src:5,l1lvl:25,l1len:30,l1hp:6000,l1delay:2})),
- mk('Phat Trance','phat',Object.assign(D(),{tailHz:55,startHz:1100,sweep:26,curve:0.9,eMud:40,eChest:30,eShine:30,clickLvl:55,clickFreq:4200,clickLen:4,body:100,sub:85,hold:12,decay:150,drive:25,trans:15,fuzz:5,clip:30,sauce:75,sPunch:65,sThump:65,sBloom:55,sCrack:45,sGlue:55,sLoud:65})),
- mk('Hard-Hitter F','hard-hitter',Object.assign(D(),{tailHz:43.654,startHz:3500,sweep:22,curve:1,clickLvl:40,clickFreq:4000,clickLen:4,body:100,sub:90,hold:8,decay:110,drive:35,trans:15,fuzz:0,clip:40,sauce:70,sPunch:70,sThump:55,sBloom:45,sCrack:60,sGlue:55,sLoud:70,eMud:50,eChest:40,eShine:40})),
- mk('Psy Knock G','psy',Object.assign(D(),{tailHz:48.999,startHz:2200,sweep:18,curve:0.9,clickLvl:50,clickFreq:3500,clickLen:3,body:100,sub:60,hold:5,decay:70,drive:20,trans:0,fuzz:0,clip:35,sauce:45,sPunch:85,sThump:35,sBloom:20,sCrack:60,sGlue:40,sLoud:55,eMud:60,eChest:20,eShine:30})),
- mk('Deep Progressive G#','deep',Object.assign(D(),{tailHz:51.913,startHz:1200,sweep:40,curve:1.1,clickLvl:25,clickFreq:3000,clickLen:3,body:70,sub:100,hold:12,decay:150,drive:10,trans:20,fuzz:0,clip:15,sauce:40,sPunch:50,sThump:70,sBloom:60,sCrack:20,sGlue:45,sLoud:45,eMud:30,eChest:50,eShine:15})),
+ mk('Phat Trance','phat',Object.assign(D(),{tailHz:55,startHz:1100,sweep:26,curve:0.9,eMud:40,eChest:30,eShine:30,sGlue:50,lim:1,limG:5,clickLvl:55,clickFreq:4200,clickLen:4,body:100,sub:85,hold:12,decay:150,drive:25,trans:15,fuzz:5,clip:30,sauce:75,sPunch:65,sThump:65,sBloom:55,sCrack:45,sGlue:55,sLoud:65})),
+ mk('Hard-Hitter F','hard-hitter',Object.assign(D(),{tailHz:43.654,startHz:3500,sweep:22,curve:1,clickLvl:40,clickFreq:4000,clickLen:4,body:100,sub:90,hold:8,decay:110,drive:35,trans:15,fuzz:0,clip:40,sauce:70,sPunch:70,sThump:55,sBloom:45,sCrack:60,sGlue:55,sLoud:70,eMud:50,eChest:40,eShine:40,sGlue:55,gAtk:30,gRel:40,lim:1,limG:6})),
+ mk('Psy Knock G','psy',Object.assign(D(),{tailHz:48.999,startHz:2200,sweep:18,curve:0.9,clickLvl:50,clickFreq:3500,clickLen:3,body:100,sub:60,hold:5,decay:70,drive:20,trans:0,fuzz:0,clip:35,sauce:45,sPunch:85,sThump:35,sBloom:20,sCrack:60,sGlue:40,sLoud:55,eMud:60,eChest:20,eShine:30,sGlue:40,gAtk:20,gRel:30,lim:0})),
+ mk('Deep Progressive G#','deep',Object.assign(D(),{tailHz:51.913,startHz:1200,sweep:40,curve:1.1,clickLvl:25,clickFreq:3000,clickLen:3,body:70,sub:100,hold:12,decay:150,drive:10,trans:20,fuzz:0,clip:15,sauce:40,sPunch:50,sThump:70,sBloom:60,sCrack:20,sGlue:45,sLoud:45,eMud:30,eChest:50,eShine:15,sGlue:45,gAtk:15,gRel:60})),
  mk('Init','init',D())
 ];
 let user=[];try{user=JSON.parse(localStorage.getItem('kk-user')||'[]');}catch(e){user=[];}
@@ -1093,7 +1158,7 @@ function saveUser(){try{localStorage.setItem('kk-user',JSON.stringify(user));}ca
 function getCur(){return cur.list==='f'?FACTORY[cur.i]:user[cur.i];}
 function load(pr){P.env=validEnv(pr.p.env);envUi();SPEC.forEach(s=>{if(typeof pr.p[s.id]==='number')P[s.id]=clamp(pr.p[s.id],s.min,s.max);});P.pol=pr.p.pol===-1?-1:1;
   LK.forEach(k=>{const v=pr.p[k];P[k]=k.endsWith('pol')?(v===-1?-1:1):(Number.isInteger(v)&&v>=0&&v<SRCN.length?v:0);});
-  SPEC.forEach(s=>knobs[s.id]&&knobs[s.id].ui());slotEls.forEach((e,i)=>slotRefresh(i));syncKey();dirty=true;edited=false;nameUi();}
+  SPEC.forEach(s=>knobs[s.id]&&knobs[s.id].ui());limUi();slotEls.forEach((e,i)=>slotRefresh(i));syncKey();dirty=true;edited=false;nameUi();}
 function nameUi(){const c=getCur();$('#pName').textContent=(c?c.name:'')+(edited?' *':'');
   $('#pRename').disabled=$('#pDel').disabled=cur.list==='f';}
 function presetEdited(){if(!edited){edited=true;nameUi();}}
@@ -1203,6 +1268,6 @@ try{bubbles=localStorage.getItem('kk-bub')!=='0';const l=localStorage.getItem('k
 readCss();fitDefault();
 function boot(){buildPiano();setScale(defScale);nameUi();requestAnimationFrame(frame);}
 if(document.fonts&&document.fonts.ready)document.fonts.ready.then(boot,boot);else boot();
-window.__kk={P,BANK,SRCN,renderKick,SPEC,FACTORY,spectrumDb,load,set,get sr(){return sr;},get buf(){return buf;},refresh};
+window.__kk={wavBlob:()=>wavBlob(),getGL:()=>GL,P,BANK,SRCN,renderKick,SPEC,FACTORY,spectrumDb,load,set,get sr(){return sr;},get buf(){return buf;},refresh};
 })();
 </script>

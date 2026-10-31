@@ -17,3 +17,11 @@ The Sauce panel runs a chain inside the render: band split (sub below 110 Hz, bo
 - Glue retuned: 10 ms attack, 35 ms release, ratio 6 to 1.
 - Start range now up to 4 kHz.
 - New presets: Hard-Hitter F, Psy Knock G, Deep Progressive G#. Values are starting points, not verified against any commercial kick.
+
+## v1.12
+- Glue is now its own panel: Mix, Threshold, Ratio, Attack (1 to 100 ms), Release, plus a meter with level, threshold line and gain reduction in dB. It works without Sauce Amount.
+- Limiter: On/Off and Push (0 to 12 dB). Raises the kick, then stops the peaks from growing.
+- Sauce is much stronger (stronger saturation, Bloom, Crack and Loud ranges).
+- Waveform panel: Export .wav (24-bit mono) and drag the waveform straight into a DAW or folder (Chromium browsers; the real plugin will use native drag).
+- Pitch envelope: every dot moves on its own, in any direction, including the first and last; the first dot can also move right.
+- Window is now 1640 x 946.
