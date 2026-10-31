@@ -49,4 +49,5 @@ The Sauce panel runs a chain inside the render: band split (sub below 110 Hz, bo
 ## v1.17
 - Built-in chops renamed and moved into the normal groups: "Kick attacks" (Kick attack 1 to 45), "Clicks" (Kick click 1 to 45), "Kicks" (Kick 1, Kick 2, and others). No pack or brand names anywhere.
 - 10 new trance presets that use those attacks and clicks (Trance Snap, Pop, Tick, Knock, Crack, Sizzle, Long, Deep, Rolling, Hard).
+- Chops re-cut: 40 ms each; attacks high-passed at 50 Hz, clicks at 100 Hz (was 70 ms and 1.5 kHz).
 - New Swell knob (Fall group): the low body grows in over the first ms like real trance kicks. Fixes boxy low mids.
