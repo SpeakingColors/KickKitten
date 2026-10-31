@@ -2,7 +2,7 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
-/* Layout: one fixed-size plugin window (1120x946) scaled as a whole, wood cheeks left and right.
+/* Layout: one fixed-size plugin window (1380x946) scaled as a whole, wood cheeks left and right.
    Looks: C PurrOne (default), A Neon Navy, B Purple Soda Pop. All colours come from these tokens. */
 :root{
   --ground:#121214; --panel:#1b1b1e; --panel2:#242428; --display:#08080a; --line:#34343a;
@@ -35,9 +35,9 @@ body{margin:0;color:var(--text);font:13px/1.35 "Barlow Condensed","Arial Narrow"
   overflow-x:hidden}
 #stage{display:flex;justify-content:center;width:100%}
 #wrap{position:relative;flex:none}
-#win{position:absolute;left:0;top:0;width:1120px;height:1066px;transform-origin:0 0;background:var(--ground);overflow:hidden;
+#win{position:absolute;left:0;top:0;width:1380px;height:946px;transform-origin:0 0;background:var(--ground);overflow:hidden;
   box-shadow:0 8px 30px #0008;user-select:none;-webkit-user-select:none}
-.cheek{position:absolute;top:0;width:52px;height:1066px}
+.cheek{position:absolute;top:0;width:52px;height:946px}
 .cheek.l{left:0}.cheek.r{right:0}
 #inner{position:absolute;left:52px;right:52px;top:0;bottom:0;display:flex;flex-direction:column;padding:8px 8px 4px;gap:8px}
 button,select,input{font:inherit;color:var(--text)}
@@ -54,7 +54,7 @@ button.on{background:var(--sel);border-color:var(--selb)}
 .presetbar{display:flex;align-items:center;gap:4px;margin-left:auto}
 #pName{min-width:118px;text-align:left;font-weight:600;color:var(--read);font-family:"JetBrains Mono",monospace;font-size:12px}
 .hbtn{display:flex;gap:4px;margin-left:4px}
-#grid{flex:1;min-height:0;display:grid;grid-template-columns:1fr 330px 56px;grid-template-rows:1fr 1fr;gap:8px}
+#grid{flex:1;min-height:0;display:grid;grid-template-columns:1fr 330px 252px 56px;grid-template-rows:1fr 1fr;gap:8px}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 8px 6px;display:flex;flex-direction:column;min-width:0;min-height:0}
 .panel h2{margin:0 0 4px;font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--title)}
 .panel h2{position:relative}
@@ -82,12 +82,13 @@ button.chip{height:auto;background:var(--display);cursor:pointer}
 button.chip:hover{border-color:var(--selb)}
 .chips{display:flex;flex-wrap:wrap;gap:4px;margin:5px 0 0}
 .lbl{color:var(--cap);font-size:11px;letter-spacing:.08em;text-transform:uppercase}
-#meterCol{grid-column:3;grid-row:1/3;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 4px;display:flex;flex-direction:column;gap:4px;min-height:0}
+#meterCol{grid-column:4;grid-row:1/3;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 4px;display:flex;flex-direction:column;gap:4px;min-height:0}
 #meterCol h2{margin:0;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--title);text-align:center}
 #cvMeter{flex:1;min-height:0;width:100%;display:block}
 #pkRead{font:600 11px "JetBrains Mono",monospace;text-align:center;cursor:pointer;background:var(--display);border:1px solid var(--line);border-radius:3px;padding:1px 0}
-#pSauce{flex:none;height:112px}
-#ctlSauce{height:78px;gap:6px}
+#pSauce{grid-column:3;grid-row:1/3;justify-content:space-around}
+#pSauce h2 small{display:block;margin:2px 0 0;line-height:1.25}
+#pSauce .ctl{justify-content:center}
 #tops{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;height:138px;flex:none}
 .slot{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:4px 6px;display:flex;flex-direction:column;gap:3px;min-width:0}
 .slot.drag{border-color:var(--selb);background:var(--sel)}
@@ -214,6 +215,10 @@ button.chip:hover{border-color:var(--selb)}
         <div class="chips" id="chips"></div>
         <div class="ctl" id="ctlOut"></div>
       </section>
+    <section class="panel" id="pSauce">
+      <h2>Sauce <small>The glue, punch and loudness that make trance kicks hit hard. Amount 0 is off.</small></h2>
+      <div class="ctl" id="ctlSauce1"></div><div class="ctl" id="ctlSauce2"></div><div class="ctl" id="ctlSauce3"></div>
+    </section>
       <aside id="meterCol">
         <h2>Out</h2>
         <div id="pkRead" data-tip="Peak of the real output in dB. Click to clear the clip latch.">-inf</div>
@@ -221,10 +226,6 @@ button.chip:hover{border-color:var(--selb)}
       </aside>
     </div>
 
-    <section class="panel" id="pSauce">
-      <h2>Sauce <small>the glue, punch and loudness that make trance kicks hit hard; Amount 0 is off</small></h2>
-      <div class="ctl" id="ctlSauce"></div>
-    </section>
     <div id="tops" aria-label="Layers and tops"></div>
     <div id="keys">
       <div id="kctl">
@@ -254,7 +255,7 @@ button.chip:hover{border-color:var(--selb)}
 'use strict';
 const $=s=>document.querySelector(s);
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
-const W=1120,H=1066;
+const W=1380,H=946;
 const NOTE=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 function hz2note(f){const n=12*Math.log2(f/440)+69,r=Math.round(n);return{name:NOTE[((r%12)+12)%12]+(Math.floor(r/12)-1),cents:(n-r)*100};}
 const KEYS=[];for(let m=23;m<=39;m++)KEYS.push([NOTE[m%12]+(Math.floor(m/12)-1),440*Math.pow(2,(m-69)/12)]);
@@ -642,8 +643,10 @@ function mkKnob(parent,id,sm){
   knobs[id]={ui};ui();
 }
 let dirty=true,flash=0,noteCache={};
-function set(id,v){const s=S[id];v=clamp(v,s.min,s.max);P[id]=v;if(knobs[id])knobs[id].ui();
-  if(P.env){if(id==='startHz')P.env[0][1]=P.startHz;else if(id==='tailHz')P.env[P.env.length-1][1]=P.tailHz;else if(id==='sweep'||id==='curve')P.env=null;envUi();}
+function set(id,v){const s=S[id];v=clamp(v,s.min,s.max);const old=P[id];P[id]=v;if(knobs[id])knobs[id].ui();
+  if(P.env){if(id==='startHz')P.env[0][1]=P.startHz;else if(id==='tailHz')P.env[P.env.length-1][1]=P.tailHz;else if(id==='sweep'&&old>0){const E=P.env,n=E.length;let r=v/old;if(E[n-1][0]*r>100)r=100/E[n-1][0];let gap=1e9;for(let i=1;i<n;i++)gap=Math.min(gap,E[i][0]-E[i-1][0]);if(gap*r<1)r=1/gap;for(let i=1;i<n;i++)E[i][0]=Math.min(100,E[i][0]*r);}
+    else if(id==='curve'&&old>0){const d=Math.log2(v/old)/2;P.env.forEach((a,i)=>{if(i<P.env.length-1)a[2]=clamp(a[2]+d,-1,1);});}
+    envUi();}
   if(id==='tailHz')syncKey();dirty=true;presetEdited();}
 function envUi(){const b=document.getElementById('envReset');if(b)b.hidden=!P.env;}
 function group(parent,name){const g=document.createElement('div');g.className='grp';if(name)g.innerHTML=`<i>${name}</i>`;parent.appendChild(g);return g;}
@@ -670,17 +673,16 @@ function syncKey(){
   const g5=group($('#ctlWave'),'Amp');['hold','decay'].forEach(i=>mkKnob(g5,i));
   const g6=group($('#ctlSpec'),'Purr Trio');['drive','trans','fuzz'].forEach(i=>mkKnob(g6,i));
   const g7=group($('#ctlSpec'));mkKnob(g7,'clip');
-  {const c=$('#ctlSauce');mkKnob(group(c,'Master'),'sauce',true);
-   const gb=group(c,'Low and body');['sThump','sBloom','sPunch'].forEach(i=>mkKnob(gb,i,true));
-   const gt=group(c,'Top');mkKnob(gt,'sCrack',true);
-   const gl=group(c,'Loudness');['sGlue','sLoud'].forEach(i=>mkKnob(gl,i,true));}
+  mkKnob(group($('#ctlSauce1'),'Master'),'sauce');
+  {const gb=group($('#ctlSauce2'),'Low and body');['sThump','sBloom','sPunch'].forEach(i=>mkKnob(gb,i));}
+  {const gl=group($('#ctlSauce3'),'Top and loudness');['sCrack','sGlue','sLoud'].forEach(i=>mkKnob(gl,i));}
   const g8=group($('#ctlOut'));mkKnob(g8,'out');
   const pb=document.createElement('div');pb.className='cell';
   pb.innerHTML='<div class="kl">Polarity</div>';
   const pbtn=document.createElement('button');pbtn.id='polBtn';pbtn.textContent='Ø';pbtn.dataset.tip='Flip the polarity of the kick. If the kick and the bass cancel each other and the low end sounds thin, flip one of them and compare.';
   pbtn.addEventListener('click',()=>{P.pol*=-1;dirty=true;presetEdited();});pb.appendChild(pbtn);g8.appendChild(pb);
   const pk=document.createElement('div');pk.className='cell';pk.innerHTML='<div class="kl">Render peak</div><span class="chip" id="rpk">-</span>';g8.appendChild(pk);
-  const lv=document.createElement('div');lv.className='cell';lv.innerHTML='<div class="kl">Body level</div><span class="chip" id="rrms" data-tip="Average level of the first 120 ms. This is the loudness you feel. Sauce raises it while the peak stays put.">-</span>';g8.appendChild(lv);
+  const lv=document.createElement('div');lv.className='cell';lv.innerHTML='<div class="kl">RMS</div><span class="chip" id="rrms" data-tip="Average level of the first 120 ms. This is the loudness you feel. Sauce raises it while the peak stays put.">-</span>';g8.appendChild(lv);
 }
 syncKey();
 /* layers UI */
@@ -1143,7 +1145,7 @@ $('#bGuide').onclick=()=>openDlg(`<h3>Guide</h3><ul>
 <li>The orange line on the waveform is where the kick ends. The purple line is one 16th note at your tempo.</li>
 <li>Space: hit the kick as set. Left and right arrows: previous and next preset.</li>
 <li>Keys work like Ableton Live: A S D F G H J K L ; ' are white keys, W E T Y U O P are black keys, Z octave down, X octave up. Same plays the identical kick on every key. Pitched retunes the kick to the note you press, so it plays up or down.</li>
-<li>Pitch envelope: double click empty space to add a dot (up to 8), double click a dot to remove it, drag a dot to move it, drag the line between two dots to bend it. Each dot shows its Hz and note. Turning Sweep or Curve, or pressing Simple curve, goes back to the simple curve.</li>
+<li>Pitch envelope: double click empty space to add a dot (up to 8), double click a dot to remove it, drag a dot to move it, drag the line between two dots to bend it. Each dot shows its Hz and note. Sweep stretches the dots in time, Curve bends every segment, and Simple curve goes back to the plain curve.</li>
 <li>Layers A, B and C add clicks, attacks and tops on top of the kick. Pick one of over 80 built-in sounds from the folders, including short cuts of the author's own samples (the arrows step through them and play the kick), or drop your own sound file on a layer, or press Load. Level, Pitch, Start, Len, Delay, HP and LP shape each one.</li>
 <li>Click the note chip under Key (for example F1 +45 ct) to snap Tail to exactly that note.</li>
 <li>Zoom with the buttons, drag any edge or corner, or double click a wood side to return to 100%.</li></ul><div class="btns"><button id="x" class="on">Close</button></div>`,d=>d.querySelector('#x').onclick=closeDlg);
