@@ -91,8 +91,14 @@ button.chip:hover{border-color:var(--selb)}
 .slot{position:relative}
 .sh .pick{flex:1;min-width:0;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sh .ar{width:20px;padding:0;flex:none}
-.pop{position:absolute;left:0;right:0;bottom:calc(100% + 4px);z-index:40;background:var(--panel);border:1px solid var(--selb);border-radius:6px;padding:3px;box-shadow:0 6px 18px rgba(0,0,0,.5)}
+.pop{position:absolute;left:0;width:176px;bottom:calc(100% + 4px);z-index:40;background:var(--panel);border:1px solid var(--selb);border-radius:6px;padding:3px;box-shadow:0 6px 18px rgba(0,0,0,.5)}
 .pop[hidden]{display:none}
+.slot.rt .pop{left:auto;right:0}
+.pop .pr.fo{overflow:visible;position:relative;cursor:default;line-height:22px;padding:0 8px;height:22px}
+.pop .pr.fo:hover{background:var(--sel)}
+.pop .sub{position:absolute;left:calc(100% + 1px);top:-4px;width:176px;background:var(--panel);border:1px solid var(--selb);border-radius:6px;padding:3px;box-shadow:0 6px 18px rgba(0,0,0,.5);visibility:hidden;opacity:0;transition:visibility 0s .22s,opacity 0s .22s;z-index:5}
+.slot.rt .pop .sub{left:auto;right:calc(100% + 1px)}
+.pop .fo:hover>.sub,.pop .fo.open>.sub{visibility:visible;opacity:1;transition-delay:.3s}
 .pop .pr{display:block;width:100%;height:22px;text-align:left;padding:0 8px;font-size:12px;border:0;border-radius:3px;background:transparent;color:var(--read);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pop .pr:hover{background:var(--sel)}
 .pop .pr.cur{color:var(--title);font-weight:700}
@@ -266,10 +272,10 @@ const SPEC=[
 const LK=[];
 for(let i=0;i<3;i++){const n='ABC'[i];
   SPEC.push(
-   {id:`l${i}lvl`,label:'Level',min:0,max:100,unit:' %',dec:0,def:50,tip:`Loudness of layer ${n}.`},
+   {id:`l${i}lvl`,label:'Level',min:0,max:100,unit:' %',dec:0,def:70,tip:`Loudness of layer ${n}.`},
    {id:`l${i}pitch`,label:'Pitch',min:-24,max:24,unit:' st',dec:0,def:0,tip:`Pitch of layer ${n} in semitones. Built-in sounds move their tone or filter. Your own sound plays faster or slower.`},
    {id:`l${i}start`,label:'Start',min:0,max:200,unit:' ms',dec:0,def:0,tip:'Skips this many ms at the start of your own sound, to cut silence or a soft attack. Only used for loaded sounds.'},
-   {id:`l${i}len`,label:'Len',min:2,max:400,log:1,unit:' ms',dec:0,def:12,tip:'How long the layer lasts. For built-in sounds it is the decay time. For your own sound it is the part that plays, with a short fade at the end.'},
+   {id:`l${i}len`,label:'Len',min:2,max:800,log:1,unit:' ms',dec:0,def:40,tip:'How long the layer lasts. For built-in sounds it is the decay time. For your own sound it is the part that plays, with a short fade at the end.'},
    {id:`l${i}delay`,label:'Delay',min:0,max:40,unit:' ms',dec:1,def:0,tip:'Starts the layer this many ms after the kick. Use it to line the top up with the body of the kick.'},
    {id:`l${i}hp`,label:'HP',min:20,max:8000,log:1,unit:' Hz',dec:0,def:20,tip:'High-pass filter. Cuts the lows of the layer so it does not fight the sub. At 20 Hz it is off.'},
    {id:`l${i}lp`,label:'LP',min:500,max:20000,log:1,unit:' Hz',dec:0,def:20000,tip:'Low-pass filter. Softens the highs of the layer. At 20 kHz it is off.'});
@@ -280,7 +286,7 @@ let bpm=138;
 
 /* ---------- layers ---------- */
 const SRCN=['Off','Click','Tick','Snap','Zap','Noise top','Ping','Sample'];
-const SRCLEN=[12,5,8,25,25,45,12,80];
+const SRCLEN=[12,20,12,25,35,60,30,80];
 const SAMP=[null,null,null],SLOTMSG=['','',''];
 function bqMake(type,f,fs){const q=type==='bp'?1.2:0.7071,w=2*Math.PI*f/fs,c=Math.cos(w),sn=Math.sin(w),al=sn/(2*q);let b0,b1,b2;
   if(type==='hp'){b0=(1+c)/2;b1=-(1+c);b2=(1+c)/2;}else if(type==='lp'){b0=(1-c)/2;b1=1-c;b2=(1-c)/2;}else{b0=al;b1=0;b2=-al;}
@@ -368,7 +374,7 @@ const BANKSR=48000,BANK=[],BANKBUF={};
    'Tine ping':'Bells','Metal ping':'Bells','Cowbell tick':'Bells','Bell tick':'Bells','Chime':'Bells','Marimba':'Bells',
    'Piano hammer':'Keys and brass','Piano tick':'Keys and brass','Brass blat':'Keys and brass','Rave stab tick':'Keys and brass','Violin bow bite':'Bow and breath','Bow chiff':'Bow and breath','Flute chiff':'Bow and breath'};
   OWN.forEach(s=>BANK.push({group:'Your samples',sub:s.folder,name:s.name,len:s.ms,sec:s.ms/1000,pcm:s}));
-  BANK.forEach(b=>{b.sub=b.sub||SUB[b.name]||'Other';});
+  BANK.forEach(b=>{b.sub=b.sub||SUB[b.name]||'Other';b.len=Math.max(b.len,Math.min(800,Math.round(b.sec*1000)));});
 })();
 function bankBuf(k){
   if(BANKBUF[k])return BANKBUF[k];const b=BANK[k];if(!b)return null;
@@ -383,7 +389,7 @@ function genLayer(p,i,fs,N){
   const k='l'+i,src=p[k+'src']|0;if(!src)return null;
   const sm=src===7?SAMP[i]:src>7?bankBuf(src-8):null;if(src>=7&&!sm)return null;
   const ratio=Math.pow(2,p[k+'pitch']/12),lenS=p[k+'len']/1000,tau=lenS/4.6;
-  const g=p[k+'lvl']/100*0.5*(p[k+'pol']<0?-1:1),i0=Math.floor(p[k+'delay']/1000*fs);
+  const g=p[k+'lvl']/100*(p[k+'pol']<0?-1:1),i0=Math.floor(p[k+'delay']/1000*fs);
   const out=new Float32Array(N);let seed=777+i*131;
   const hpF=p[k+'hp']>21?bqMake('hp',Math.min(p[k+'hp'],fs*0.45),fs):null,lpF=p[k+'lp']<19500?bqMake('lp',Math.min(p[k+'lp'],fs*0.45),fs):null;
   let nf=null,y1=0,x1=0,ph=0;
@@ -407,7 +413,7 @@ function genLayer(p,i,fs,N){
       else if(src===6){ph+=2*Math.PI*Math.min(1500*ratio,fs*0.4)/fs;v=Math.sin(ph)*e;}
     }
     if(hpF)v=bqRun(hpF,v);if(lpF)v=bqRun(lpF,v);
-    out[j]=v*g;
+    {const y=v*g,a=Math.abs(y);out[j]=a<0.5?y:Math.sign(y)*(0.5+0.5*Math.tanh((a-0.5)/0.5));}
   }
   return out;
 }
@@ -628,24 +634,25 @@ async function loadFile(i,f){
     if(pk<1e-6){msg('This file is silent.');return;}
     for(let k=0;k<n;k++)d[k]*=0.9/pk;
     SAMP[i]={name:f.name.replace(/[^\w .()-]/g,'').slice(0,40)||'sound',data:d,sr:au.sampleRate};SLOTMSG[i]='';
-    P[`l${i}src`]=7;set(`l${i}len`,clamp(n/au.sampleRate*1000,2,400));set(`l${i}start`,0);slotRefresh(i);dirty=true;
+    P[`l${i}src`]=7;set(`l${i}len`,clamp(n/au.sampleRate*1000,2,800));set(`l${i}start`,0);slotRefresh(i);dirty=true;
   }catch(e){msg('Could not read this file. Try wav, flac, mp3 or ogg.');}
 }
 (function(){
   const host=$('#tops');
   'ABC'.split('').forEach((nm,i)=>{
-    const sec=document.createElement('section');sec.className='slot';
+    const sec=document.createElement('section');sec.className='slot'+(i===2?' rt':'');
     sec.innerHTML=`<div class="sh"><b>Layer ${nm}</b><button class="ar pv" aria-label="Previous sound" data-tip="Previous sound. Plays the kick so you can hear it.">‹</button><button class="pick" aria-label="Layer ${nm} sound" data-tip="Open the sound folders: clicks, kick attacks, snaps, hats, zaps, tonal tops, and your own sample."></button><button class="ar nx" aria-label="Next sound" data-tip="Next sound. Plays the kick so you can hear it.">›</button><button class="ld" data-tip="Load your own sound (wav, flac, mp3 or ogg, up to 3 seconds). You can also drop a file on this layer.">Load</button><button class="pl" data-tip="Flip the polarity of this layer.">Ø</button></div><canvas id="lw${i}" aria-label="Layer ${nm} shape"></canvas><div class="sk"></div><input type="file" accept="audio/*" hidden aria-label="Load sound for layer ${nm}"><div class="pop" hidden></div>`;
     host.appendChild(sec);
     const sk=sec.querySelector('.sk'),fi=sec.querySelector('input'),pick=sec.querySelector('.pick'),pop=sec.querySelector('.pop');
-    let path=[];
     const choose=v=>{setSrc(i,v,true);audition();pop.hidden=true;if(v===7&&!SAMP[i])fi.click();};
-    const node=()=>path.reduce((n,k)=>n.kids.find(x=>x.name===k),TREE);
-    function drawPop(){const n=node();pop.innerHTML='';
-      const add=(cls,txt,fn)=>{const b=document.createElement('button');b.className='pr '+cls;b.textContent=txt;b.addEventListener('click',e=>{e.stopPropagation();fn();});pop.appendChild(b);};
-      if(path.length)add('up','\u2039 '+path.join(' / '),()=>{path.pop();drawPop();});
-      n.kids.forEach(k=>{if(k.kids)add('fo',k.name,()=>{path.push(k.name);drawPop();});else add(k.v===P[`l${i}src`]?'cur':'',k.v===7&&SAMP[i]?'Sample: '+SAMP[i].name:k.name,()=>choose(k.v));});}
-    pick.addEventListener('click',()=>{const was=pop.hidden;closePops();if(was){path=[];drawPop();pop.hidden=false;}pick.blur();});
+    function build(n,host){n.kids.forEach(k=>{
+      if(k.kids){const r=document.createElement('div');r.className='pr fo';r.setAttribute('role','menuitem');r.appendChild(document.createTextNode(k.name));
+        const sb=document.createElement('div');sb.className='sub';build(k,sb);r.appendChild(sb);
+        r.addEventListener('click',e=>{if(e.target===r){e.stopPropagation();r.classList.toggle('open');}});host.appendChild(r);}
+      else{const b=document.createElement('button');b.className='pr'+(k.v===P[`l${i}src`]?' cur':'');b.textContent=k.v===7&&SAMP[i]?'Sample: '+SAMP[i].name:k.name;
+        b.addEventListener('click',e=>{e.stopPropagation();choose(k.v);});host.appendChild(b);}});}
+    function drawPop(){pop.innerHTML='';build(TREE,pop);}
+    pick.addEventListener('click',()=>{const was=pop.hidden;closePops();if(was){drawPop();pop.hidden=false;}pick.blur();});
     pop._close=()=>{pop.hidden=true;};
     const go=d=>{const o=srcOrder(i),k=o.indexOf(P[`l${i}src`]);choose(o[(k+d+o.length)%o.length]);};
     sec.querySelector('.pv').addEventListener('click',e=>{go(-1);e.currentTarget.blur();});
