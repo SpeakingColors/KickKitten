@@ -217,7 +217,7 @@ button.chip:hover{border-color:var(--selb)}
       </section>
     <section class="panel" id="pSauce">
       <h2>Sauce <small>The glue, punch and loudness that make trance kicks hit hard. Amount 0 is off.</small></h2>
-      <div class="ctl" id="ctlSauce1"></div><div class="ctl" id="ctlSauce2"></div><div class="ctl" id="ctlSauce3"></div>
+      <div class="ctl" id="ctlSauce1"></div><div class="ctl" id="ctlSauce2"></div><div class="ctl" id="ctlSauce3"></div><div class="ctl" id="ctlSauce4"></div>
     </section>
       <aside id="meterCol">
         <h2>Out</h2>
@@ -263,7 +263,7 @@ const KEYS=[];for(let m=23;m<=39;m++)KEYS.push([NOTE[m%12]+(Math.floor(m/12)-1),
 /* ---------- parameters ---------- */
 const SPEC=[
  {id:'tailHz',label:'Tail',min:30,max:80,log:1,unit:' Hz',dec:1,def:55,tip:'The pitch the kick settles on. Tune it to the root note of your track so kick and sub bass add up instead of fighting. A1 is 55 Hz, F#1 is 46.25 Hz.'},
- {id:'startHz',label:'Start',min:200,max:2000,log:1,unit:' Hz',dec:0,def:900,tip:'Pitch at the very first moment. A high start (about 800 to 1000 Hz) gives the snap.'},
+ {id:'startHz',label:'Start',min:200,max:4000,log:1,unit:' Hz',dec:0,def:900,tip:'Pitch at the very first moment. A high start (about 800 to 1000 Hz) gives the snap.'},
  {id:'sweep',label:'Sweep',min:8,max:80,log:1,unit:' ms',dec:1,def:30,tip:'How fast the pitch falls from Start to Tail. About 25 to 35 ms is tight. Around 80 ms starts to sound like a laser.'},
  {id:'curve',label:'Curve',min:0.5,max:2,log:1,unit:'',dec:2,def:1,tip:'Shape of the fall. 1.00 is exponential. Lower drops faster at the start, higher drops slower at the start.'},
  {id:'clickLvl',label:'Level',min:0,max:100,unit:' %',dec:0,def:50,tip:'Loudness of the click, the short high knock that lets you hear the kick inside a wall of supersaws.'},
@@ -282,8 +282,11 @@ const SPEC=[
  {id:'sThump',label:'Thump',min:0,max:100,unit:' %',dec:0,def:60,tip:'Saturates the sub below 120 Hz so the low note grows harmonics at 2 and 3 times its pitch. Gives weight you can hear on laptop speakers, and a little more low level.'},
  {id:'sBloom',label:'Bloom',min:0,max:100,unit:' %',dec:0,def:50,tip:'A soft swell in the low tail at about 40 to 80 ms. Makes the kick breathe and pump, so the tail lifts after the hit instead of just dying away.'},
  {id:'sCrack',label:'Crack',min:0,max:100,unit:' %',dec:0,def:40,tip:'Lifts and rounds the top band above 800 Hz, strongest in the first 10 ms. Sharper attack that cuts through a full mix.'},
- {id:'sGlue',label:'Glue',min:0,max:100,unit:' %',dec:0,def:50,tip:'Heavy parallel compression blended under the kick. Fast attack and release, ratio about 10 to 1. Fills the gaps in the tail so the kick feels thick and solid.'},
+ {id:'sGlue',label:'Glue',min:0,max:100,unit:' %',dec:0,def:50,tip:'Heavy parallel compression blended under the kick. Attack 10 ms lets the click through, release 35 ms, ratio 6 to 1. Fills the gaps in the tail so the kick feels thick and solid.'},
  {id:'sLoud',label:'Loud',min:0,max:100,unit:' %',dec:0,def:60,tip:'Makes the kick denser and louder while the peak stays the same: up to 6 dB more average level, with the peaks shaved smoothly instead of hard clipped.'},
+ {id:'eMud',label:'Mud',min:0,max:100,unit:' %',dec:0,def:0,tip:'Cuts the boxy zone around 280 Hz, up to 6 dB. That is where kicks sound cardboard or cheap.'},
+ {id:'eChest',label:'Chest',min:0,max:100,unit:' %',dec:0,def:0,tip:'Wide soft boost around 90 Hz, up to 4 dB. The part you feel in your chest.'},
+ {id:'eShine',label:'Shine',min:0,max:100,unit:' %',dec:0,def:0,tip:'Presence boost around 5 kHz, up to 6 dB. Gives the click a modern sheen so it cuts through.'},
  {id:'out',label:'Output',min:-24,max:6,unit:' dB',dec:1,def:0,tip:'Output level in dB. Watch the meter on the right.'}
 ];
 const LK=[];
@@ -442,7 +445,7 @@ function envF(e,t){
   return e[e.length-1][1];}
 function validEnv(e){
   if(!Array.isArray(e)||e.length<2||e.length>8)return null;
-  const o=[];for(const a of e){if(!Array.isArray(a)||a.length!==3||!a.every(Number.isFinite))return null;o.push([clamp(a[0],0,100),clamp(a[1],20,2000),clamp(a[2],-1,1)]);}
+  const o=[];for(const a of e){if(!Array.isArray(a)||a.length!==3||!a.every(Number.isFinite))return null;o.push([clamp(a[0],0,100),clamp(a[1],20,4000),clamp(a[2],-1,1)]);}
   o[0][0]=0;for(let i=1;i<o.length;i++)if(o[i][0]<=o[i-1][0]+0.5)return null;
   return o;}
 function legacyToEnv(){
@@ -453,6 +456,13 @@ function legacyToEnv(){
     if(isFinite(v)&&v>0.02&&v<0.98)pts[i][2]=clamp(Math.log2(Math.log(v)/Math.log(0.5))/2,-1,1);}
   return pts;}
 /* ---------- Sauce: parallel band saturation, tail bloom, glue and loudness, all offline at the oversampled rate ---------- */
+function peqRun(x,fs,f,q,gdb){
+  if(Math.abs(gdb)<0.05)return;
+  const A=Math.pow(10,gdb/40),w=2*Math.PI*f/fs,al=Math.sin(w)/(2*q),c=Math.cos(w),a0=1+al/A;
+  const b0=(1+al*A)/a0,b1=-2*c/a0,b2=(1-al*A)/a0,a1=-2*c/a0,a2=(1-al/A)/a0;let x1=0,x2=0,y1=0,y2=0;
+  for(let i=0;i<x.length;i++){const v=x[i],y=b0*v+b1*x1+b2*x2-a1*y1-a2*y2;x2=x1;x1=v;y2=y1;y1=y;x[i]=y;}}
+function toneFx(x,fs,p){
+  peqRun(x,fs,280,1.2,-6*p.eMud/100);peqRun(x,fs,90,0.9,4*p.eChest/100);peqRun(x,fs,5000,0.7,6*p.eShine/100);}
 function sauceFx(x,fs,p){
   const A=p.sauce/100;if(A<=0)return;
   const N=x.length,k=n=>p[n]/100*A,kP=k('sPunch'),kT=k('sThump'),kB=k('sBloom'),kC=k('sCrack'),kG=k('sGlue'),kL=k('sLoud');
@@ -473,10 +483,10 @@ function sauceFx(x,fs,p){
     const hi=(high[i]*(1-kC)+sh[i]*kC)*(1+kC*(0.5+1.2*Math.exp(-t/0.006)));
     y[i]=lo+mi+hi;}
   if(kG>0){
-    const thr=0.22*pkOf(y),ca=Math.exp(-1/(0.004*fs)),cr=Math.exp(-1/(0.05*fs));let env=0;
+    const thr=0.22*pkOf(y),ca=Math.exp(-1/(0.010*fs)),cr=Math.exp(-1/(0.035*fs));let env=0;
     const cmp=new Float32Array(N);let ry=0,rc=0;
     for(let i=0;i<N;i++){const a=Math.abs(y[i]);env=a>env?ca*env+(1-ca)*a:cr*env+(1-cr)*a;
-      const g=env>thr?Math.pow(thr/env,1-1/10):1;cmp[i]=y[i]*g;if(i<m){ry+=y[i]*y[i];rc+=cmp[i]*cmp[i];}}
+      const g=env>thr?Math.pow(thr/env,1-1/6):1;cmp[i]=y[i]*g;if(i<m){ry+=y[i]*y[i];rc+=cmp[i]*cmp[i];}}
     const mk=rc>1e-12?Math.sqrt(ry/rc):1,w=0.65*kG;
     for(let i=0;i<N;i++)y[i]=y[i]*(1-w)+cmp[i]*mk*w;}
   if(kL>0){
@@ -526,6 +536,7 @@ function renderKick(p,sr){
     for(let i=0;i<N;i++)x[i]=y[i]*mk;
   }
   sauceFx(x,fs,p);
+  toneFx(x,fs,p);
   // clip (smooth, normalised so full scale stays full scale) and DC block
   const c=p.clip/100,gc=1+3*c,tg=Math.tanh(gc),R=1-twoPi*8/fs;
   let px=0,py=0;
@@ -674,6 +685,7 @@ function syncKey(){
   const g6=group($('#ctlSpec'),'Purr Trio');['drive','trans','fuzz'].forEach(i=>mkKnob(g6,i));
   const g7=group($('#ctlSpec'));mkKnob(g7,'clip');
   mkKnob(group($('#ctlSauce1'),'Master'),'sauce');
+  {const gt=group($('#ctlSauce4'),'Tone EQ');['eMud','eChest','eShine'].forEach(i=>mkKnob(gt,i));}
   {const gb=group($('#ctlSauce2'),'Low and body');['sThump','sBloom','sPunch'].forEach(i=>mkKnob(gb,i));}
   {const gl=group($('#ctlSauce3'),'Top and loudness');['sCrack','sGlue','sLoud'].forEach(i=>mkKnob(gl,i));}
   const g8=group($('#ctlOut'));mkKnob(g8,'out');
@@ -804,12 +816,12 @@ let buf=new Float32Array(1),mags=null,rmsInfo={peak:0};
 function clearC(c){const g=c._g;g.fillStyle=CSS.display;g.fillRect(0,0,c._w,c._h);return g;}
 function txt(g,s,x,y,col,al,font){g.fillStyle=col;g.textAlign=al||'left';g.font=font||'10px "JetBrains Mono",monospace';g.fillText(s,x,y);}
 const pitchGeom=c=>({l:44,r:c._w-46,t:12,b:c._h-22});
-const fy=(f,gm)=>gm.t+(1-Math.log(f/20)/Math.log(80))*(gm.b-gm.t);
+const fy=(f,gm)=>gm.t+(1-Math.log(f/20)/Math.log(200))*(gm.b-gm.t);
 const fx=(ms,gm)=>gm.l+ms/100*(gm.r-gm.l);
 function drawPitch(){
   const c=$('#cvPitch'),g=clearC(c),gm=pitchGeom(c);
   g.lineWidth=1;g.strokeStyle=CSS.grid;
-  [25,50,100,200,400,800,1600].forEach(f=>{const y=fy(f,gm);g.beginPath();g.moveTo(gm.l,y);g.lineTo(gm.r,y);g.stroke();txt(g,f+(f>=1000?'':''),gm.l-5,y+3,CSS.cap,'right');});
+  [25,50,100,200,400,800,1600,3200].forEach(f=>{const y=fy(f,gm);g.beginPath();g.moveTo(gm.l,y);g.lineTo(gm.r,y);g.stroke();txt(g,f+(f>=1000?'':''),gm.l-5,y+3,CSS.cap,'right');});
   txt(g,'Hz',8,gm.b+12,CSS.cap,'left');
   for(let ms=0;ms<=100;ms+=10){const x=fx(ms,gm);g.beginPath();g.moveTo(x,gm.t);g.lineTo(x,gm.b);g.stroke();txt(g,ms,x,gm.b+12,CSS.cap,'center');}
   txt(g,'ms',gm.r+4,gm.b+12,CSS.cap,'left');
@@ -824,12 +836,12 @@ function drawPitch(){
   const E=P.env;
   g.strokeStyle=CSS.curve;g.lineWidth=2;g.beginPath();
   for(let i=0;i<=200;i++){const ms=i/2,f=E?envF(E,ms):P.tailHz+(P.startHz-P.tailHz)*Math.exp(-3*Math.pow(ms/P.sweep,P.curve));
-    const x=fx(ms,gm),y=fy(clamp(f,20,1600),gm);i?g.lineTo(x,y):g.moveTo(x,y);}
+    const x=fx(ms,gm),y=fy(clamp(f,20,4000),gm);i?g.lineTo(x,y):g.moveTo(x,y);}
   g.stroke();g.lineWidth=1;
   // dots
   const f1=P.tailHz+(P.startHz-P.tailHz)*Math.exp(-3);
   const dots=E?E.map(a=>[a[0],a[1]]):[[0,P.startHz],[P.sweep,f1]];
-  dots.forEach((d,k)=>{const x=fx(d[0],gm),y=fy(clamp(d[1],20,1600),gm);
+  dots.forEach((d,k)=>{const x=fx(d[0],gm),y=fy(clamp(d[1],20,4000),gm);
     g.fillStyle=CSS.ground;g.strokeStyle=(drag&&drag.k===k)?CSS.read:CSS.curve;g.lineWidth=2;g.beginPath();g.arc(x,y,6,0,7);g.fill();g.stroke();g.lineWidth=1;
     const nn=hz2note(d[1]),cr=Math.round(nn.cents),lab=`${d[1].toFixed(d[1]<100?1:0)} Hz ${nn.name}${cr?` ${cr>0?'+':''}${cr}`:''}`;
     const right=x<gm.r-120;txt(g,lab,right?x+10:x-10,y+(k===0?3:-9),CSS.read,right?'left':'right');
@@ -839,14 +851,14 @@ let drag=null;
 (function(){
   const c=$('#cvPitch');
   const pos=e=>{const r=c.getBoundingClientRect();return{x:(e.clientX-r.left)/r.width*c._w,y:(e.clientY-r.top)/r.height*c._h};};
-  const toHz=(y,gm)=>20*Math.pow(80,1-(y-gm.t)/(gm.b-gm.t)),toMs=(x,gm)=>(x-gm.l)/(gm.r-gm.l)*100;
+  const toHz=(y,gm)=>20*Math.pow(200,1-(y-gm.t)/(gm.b-gm.t)),toMs=(x,gm)=>(x-gm.l)/(gm.r-gm.l)*100;
   const dotsNow=()=>P.env?P.env.map(a=>[a[0],a[1]]):[[0,P.startHz],[P.sweep,P.tailHz+(P.startHz-P.tailHz)*Math.exp(-3)]];
   function hit(p){const gm=pitchGeom(c),d=dotsNow();
-    for(let k=d.length-1;k>=0;k--)if(Math.hypot(p.x-fx(d[k][0],gm),p.y-fy(clamp(d[k][1],20,1600),gm))<11)return{type:'dot',k};
+    for(let k=d.length-1;k>=0;k--)if(Math.hypot(p.x-fx(d[k][0],gm),p.y-fy(clamp(d[k][1],20,4000),gm))<11)return{type:'dot',k};
     if(!P.env&&Math.abs(p.y-fy(P.tailHz,gm))<7&&p.x>=gm.l&&p.x<=gm.r)return{type:'tail'};
     if(p.x>=gm.l&&p.x<=gm.r){const ms=toMs(p.x,gm);let f;
       if(P.env)f=envF(P.env,ms);else f=P.tailHz+(P.startHz-P.tailHz)*Math.exp(-3*Math.pow(ms/P.sweep,P.curve));
-      if(Math.abs(p.y-fy(clamp(f,20,1600),gm))<8){
+      if(Math.abs(p.y-fy(clamp(f,20,4000),gm))<8){
         if(P.env){for(let i=0;i<P.env.length-1;i++)if(ms>=P.env[i][0]&&ms<P.env[i+1][0])return{type:'seg',i};}
         else return{type:'seg',i:-1};}}
     return null;}
@@ -857,7 +869,7 @@ let drag=null;
       else if(drag.type==='dot'){const k=drag.k;
         if(!P.env){ if(k===0)set('startHz',toHz(p.y,gm));else set('sweep',toMs(p.x,gm)); }
         else{const E=P.env,n=E.length;let ms=k===0?0:clamp(toMs(p.x,gm),E[k-1][0]+1,k<n-1?E[k+1][0]-1:100),hz=toHz(p.y,gm);
-          if(k===0){set('startHz',hz);}else if(k===n-1){E[k][0]=ms;set('tailHz',hz);}else{E[k][0]=ms;E[k][1]=clamp(hz,20,2000);dirty=true;presetEdited();}}}
+          if(k===0){set('startHz',hz);}else if(k===n-1){E[k][0]=ms;set('tailHz',hz);}else{E[k][0]=ms;E[k][1]=clamp(hz,20,4000);dirty=true;presetEdited();}}}
       else if(drag.type==='seg'&&P.env){const E=P.env,a=E[drag.i],b=E[drag.i+1],u=(toMs(p.x,gm)-a[0])/(b[0]-a[0]);
         const fy_=toHz(p.y,gm),v=(Math.log(fy_)-Math.log(a[1]))/(Math.log(b[1])-Math.log(a[1]));
         if(u>0.08&&u<0.92&&isFinite(v)&&v>0.02&&v<0.98&&Math.abs(Math.log(b[1]/a[1]))>0.05){a[2]=clamp(Math.log2(Math.log(v)/Math.log(u))/2,-1,1);dirty=true;presetEdited();}}
@@ -880,7 +892,7 @@ let drag=null;
     ensure();const E=P.env;if(E.length>=8)return;
     const ms=clamp(toMs(p.x,gm),1,99);let k=1;while(k<E.length&&E[k][0]<ms)k++;
     if(E[k-1][0]>ms-1||(k<E.length&&E[k][0]<ms+1))return;
-    E.splice(k,0,[ms,clamp(toHz(p.y,gm),20,2000),0]);dirty=true;presetEdited();});
+    E.splice(k,0,[ms,clamp(toHz(p.y,gm),20,4000),0]);dirty=true;presetEdited();});
   $('#envReset').addEventListener('click',()=>{P.env=null;envUi();dirty=true;presetEdited();});
 })();
 
@@ -1067,7 +1079,10 @@ const FACTORY=[
  mk('Punchy Click','punchy',Object.assign(D(),{tailHz:55,startHz:1000,sweep:24,curve:0.9,clickLvl:80,clickFreq:4500,clickLen:5,body:100,sub:70,hold:10,decay:120,drive:20,trans:10,fuzz:5,clip:30,l0src:3,l0lvl:35,l0len:20,l0hp:2000})),
  mk('Subby Deep','sub',Object.assign(D(),{tailHz:46.249,startHz:600,sweep:40,curve:1.3,clickLvl:25,clickFreq:2000,clickLen:3,body:55,sub:100,hold:15,decay:190,drive:8,trans:0,fuzz:0,clip:10})),
  mk('Hard Dance','hard',Object.assign(D(),{tailHz:61.735,startHz:1200,sweep:22,curve:0.8,clickLvl:90,clickFreq:5000,clickLen:6,body:100,sub:80,hold:10,decay:110,drive:45,trans:30,fuzz:20,clip:55,l0src:4,l0lvl:30,l0len:20,l0hp:1500,l1src:5,l1lvl:25,l1len:30,l1hp:6000,l1delay:2})),
- mk('Phat Trance','phat',Object.assign(D(),{tailHz:55,startHz:1100,sweep:26,curve:0.9,clickLvl:55,clickFreq:4200,clickLen:4,body:100,sub:85,hold:12,decay:150,drive:25,trans:15,fuzz:5,clip:30,sauce:75,sPunch:65,sThump:65,sBloom:55,sCrack:45,sGlue:55,sLoud:65})),
+ mk('Phat Trance','phat',Object.assign(D(),{tailHz:55,startHz:1100,sweep:26,curve:0.9,eMud:40,eChest:30,eShine:30,clickLvl:55,clickFreq:4200,clickLen:4,body:100,sub:85,hold:12,decay:150,drive:25,trans:15,fuzz:5,clip:30,sauce:75,sPunch:65,sThump:65,sBloom:55,sCrack:45,sGlue:55,sLoud:65})),
+ mk('Hard-Hitter F','hard-hitter',Object.assign(D(),{tailHz:43.654,startHz:3500,sweep:22,curve:1,clickLvl:40,clickFreq:4000,clickLen:4,body:100,sub:90,hold:8,decay:110,drive:35,trans:15,fuzz:0,clip:40,sauce:70,sPunch:70,sThump:55,sBloom:45,sCrack:60,sGlue:55,sLoud:70,eMud:50,eChest:40,eShine:40})),
+ mk('Psy Knock G','psy',Object.assign(D(),{tailHz:48.999,startHz:2200,sweep:18,curve:0.9,clickLvl:50,clickFreq:3500,clickLen:3,body:100,sub:60,hold:5,decay:70,drive:20,trans:0,fuzz:0,clip:35,sauce:45,sPunch:85,sThump:35,sBloom:20,sCrack:60,sGlue:40,sLoud:55,eMud:60,eChest:20,eShine:30})),
+ mk('Deep Progressive G#','deep',Object.assign(D(),{tailHz:51.913,startHz:1200,sweep:40,curve:1.1,clickLvl:25,clickFreq:3000,clickLen:3,body:70,sub:100,hold:12,decay:150,drive:10,trans:20,fuzz:0,clip:15,sauce:40,sPunch:50,sThump:70,sBloom:60,sCrack:20,sGlue:45,sLoud:45,eMud:30,eChest:50,eShine:15})),
  mk('Init','init',D())
 ];
 let user=[];try{user=JSON.parse(localStorage.getItem('kk-user')||'[]');}catch(e){user=[];}
