@@ -74,6 +74,9 @@ button.on{background:var(--sel);border-color:var(--selb)}
 .cell .kl{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
 .cell select{background:var(--btn);border:1px solid var(--line);border-radius:4px;height:26px;width:76px}
 .chip{font:600 11px "JetBrains Mono",monospace;color:var(--read);background:var(--display);border:1px solid var(--line);border-radius:3px;padding:1px 6px;white-space:nowrap}
+.chip{margin:0}
+button.chip{height:auto;background:var(--display);cursor:pointer}
+button.chip:hover{border-color:var(--selb)}
 .chips{display:flex;flex-wrap:wrap;gap:4px;margin:5px 0 0}
 .lbl{color:var(--cap);font-size:11px;letter-spacing:.08em;text-transform:uppercase}
 #meterCol{grid-column:3;grid-row:1/3;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 4px;display:flex;flex-direction:column;gap:4px;min-height:0}
@@ -190,16 +193,16 @@ button.on{background:var(--sel);border-color:var(--selb)}
 
     <div id="keys">
       <div id="kctl">
-        <div class="row"><button id="oDn" aria-label="Octave down" data-tip="Move the keyboard one octave down. Key: Arrow Down.">Oct −</button><button id="oUp" aria-label="Octave up" data-tip="Move the keyboard one octave up. Key: Arrow Up.">+</button></div>
+        <div class="row"><button id="oDn" aria-label="Octave down" data-tip="Move the keyboard one octave down. Key: Z.">Oct −</button><button id="oUp" aria-label="Octave up" data-tip="Move the keyboard one octave up. Key: X.">+</button></div>
         <button id="ktBtn" class="on" data-tip="On: each key retunes the whole kick to that note, so you can play bass kicks and hear the tail on any note. Off: every key plays the same kick.">Key track</button>
         <span class="chip" id="played">-</span>
       </div>
-      <div id="piano" data-tip="Click the keys, or use your computer keyboard: bottom row Z S X D C V G B H N J M is one octave, top row Q 2 W 3 E R 5 T 6 Y 7 U is the next. Arrow Up and Down change octave."></div>
+      <div id="piano" data-tip="Click the keys, or use your computer keyboard like Ableton Live: A S D F G H J K L ; ' are the white keys, W E T Y U O P the black keys. Z octave down, X octave up."></div>
     </div>
     <div id="rig">
       <span class="tag" data-tip="This strip only helps you test the sound. It is not part of the plugin.">Preview rig</span>
       <button id="hitBtn" data-tip="Play the kick. Space bar does the same.">Hit</button>
-      <button id="loopBtn" data-tip="Loop one kick per beat at the tempo on the right. Key: L.">Loop</button>
+      <button id="loopBtn" data-tip="Loop one kick per beat at the tempo on the right.">Loop</button>
       <span class="lbl">BPM</span><input id="bpm" type="number" min="60" max="200" step="1" value="138" data-tip="Tempo used by the loop and the timing readout. 138 is the default.">
       <button id="bassBtn" data-tip="Adds a simple rolling bass on the 16th notes after each kick, one octave above the tail note, so you can hear how kick and bass sit together.">Bass test</button>
       <div class="zoom"><span class="lbl">Zoom</span><button id="zOut" aria-label="Smaller">−</button><span class="chip" id="zPct">100%</span><button id="zIn" aria-label="Bigger">+</button></div>
@@ -409,7 +412,9 @@ const keySel=document.createElement('select');keySel.id='keySel';keySel.setAttri
 keySel.dataset.tip='Pick the root note of your track. The tail pitch snaps to it. Use the Tail knob for fine tuning.';
 keySel.innerHTML='<option value="">Free</option>'+KEYS.map(k=>`<option value="${k[1]}">${k[0]}</option>`).join('');
 keySel.addEventListener('change',()=>{if(keySel.value)set('tailHz',parseFloat(keySel.value));});
-const keyChip=document.createElement('span');keyChip.className='chip';
+const keyChip=document.createElement('button');keyChip.className='chip';keyChip.id='keyChip';
+keyChip.dataset.tip='Click to snap Tail to the exact note shown (0 ct). Example: F1 +45 ct becomes F1 0 ct.';
+keyChip.addEventListener('click',()=>{const m=Math.round(12*Math.log2(P.tailHz/440)+69);set('tailHz',440*Math.pow(2,(m-69)/12));});
 function syncKey(){
   let m='';for(const k of KEYS)if(Math.abs(Math.log2(P.tailHz/k[1]))*1200<1)m=String(k[1]);
   keySel.value=m;const n=hz2note(P.tailHz);keyChip.textContent=`${n.name} ${n.cents>=0?'+':''}${n.cents.toFixed(0)} ct`;
@@ -652,9 +657,9 @@ document.addEventListener('pointerdown',()=>{clearTimeout(tipT);tip.classList.re
 
 /* ---------- keyboard ---------- */
 let baseMidi=24,keyTrack=true;const down=new Set();
-const QL=['KeyZ','KeyS','KeyX','KeyD','KeyC','KeyV','KeyG','KeyB','KeyH','KeyN','KeyJ','KeyM'];
-const QU=['KeyQ','Digit2','KeyW','Digit3','KeyE','KeyR','Digit5','KeyT','Digit6','KeyY','Digit7','KeyU'];
-const QLAB={KeyZ:'Z',KeyS:'S',KeyX:'X',KeyD:'D',KeyC:'C',KeyV:'V',KeyG:'G',KeyB:'B',KeyH:'H',KeyN:'N',KeyJ:'J',KeyM:'M',KeyQ:'Q',Digit2:'2',KeyW:'W',Digit3:'3',KeyE:'E',KeyR:'R',Digit5:'5',KeyT:'T',Digit6:'6',KeyY:'Y',Digit7:'7',KeyU:'U'};
+const AKEY={KeyA:0,KeyW:1,KeyS:2,KeyE:3,KeyD:4,KeyF:5,KeyT:6,KeyG:7,KeyY:8,KeyH:9,KeyU:10,KeyJ:11,KeyK:12,KeyO:13,KeyL:14,KeyP:15,Semicolon:16,Quote:17};
+const ALAB={KeyA:'A',KeyW:'W',KeyS:'S',KeyE:'E',KeyD:'D',KeyF:'F',KeyT:'T',KeyG:'G',KeyY:'Y',KeyH:'H',KeyU:'U',KeyJ:'J',KeyK:'K',KeyO:'O',KeyL:'L',KeyP:'P',Semicolon:';',Quote:"'"};
+const OFF2CODE={};Object.keys(AKEY).forEach(c=>OFF2CODE[AKEY[c]]=c);
 const codeNote={};
 function buildPiano(){
   const pn=$('#piano');pn.innerHTML='';const W0=pn.clientWidth||900,ww=W0/21;
@@ -662,7 +667,7 @@ function buildPiano(){
   for(let o=0;o<3;o++)for(let k=0;k<12;k++){
     const m=baseMidi+o*12+k,isW=white.includes(k),el=document.createElement('div');el.dataset.m=m;
     el.setAttribute('aria-label',NOTE[k]+(Math.floor(m/12)-1));
-    let lab='';if(o<2){const code=(o===0?QL:QU)[k];lab=QLAB[code];codeNote[code]=m;}
+    const off=o*12+k;let lab='';if(OFF2CODE[off]){lab=ALAB[OFF2CODE[off]];codeNote[OFF2CODE[off]]=m;}
     if(isW){el.className='wk'+(k===0?' c':'');el.style.left=wi*ww+'px';el.style.width=ww+'px';el.textContent=lab;
       if(k===0)el.title='';wi++;}
     else{el.className='bk';const bw=ww*0.62;el.style.left=(wi*ww-bw/2)+'px';el.style.width=bw+'px';el.textContent=lab;}
@@ -670,7 +675,7 @@ function buildPiano(){
   }
   pn._keys=keys;
 }
-function setBase(m){baseMidi=clamp(m,12,48);Object.keys(codeNote).forEach(k=>delete codeNote[k]);buildPiano();}
+function setBase(m){baseMidi=clamp(m,24,60);Object.keys(codeNote).forEach(k=>delete codeNote[k]);buildPiano();}
 function noteBuf(m){
   if(!keyTrack||!ctx)return curBuf;if(noteCache[m])return noteCache[m];
   const f=440*Math.pow(2,(m-69)/12),q=Object.assign({},P,{tailHz:f,startHz:P.startHz*f/P.tailHz});
@@ -773,8 +778,9 @@ $('#bGuide').onclick=()=>openDlg(`<h3>Guide</h3><ul>
 <li>In the pitch graph drag the left dot (Start), the second dot (Sweep) and the dashed line (Tail).</li>
 <li>Pick the Key of your song. The tail pitch snaps to its note.</li>
 <li>The orange line on the waveform is where the kick ends. The purple line is one 16th note at your tempo.</li>
-<li>Space: hit the kick as set. L: loop. Left and right arrows: previous and next preset.</li>
-<li>Keys: click the piano or use Z S X D C V G B H N J M (one octave) and Q 2 W 3 E R 5 T 6 Y 7 U (next octave). Arrow Up and Down change octave. Key track retunes the kick to the note you press.</li>
+<li>Space: hit the kick as set. Left and right arrows: previous and next preset.</li>
+<li>Keys work like Ableton Live: A S D F G H J K L ; ' are white keys, W E T Y U O P are black keys, Z octave down, X octave up. Key track retunes the kick to the note you press.</li>
+<li>Click the note chip under Key (for example F1 +45 ct) to snap Tail to exactly that note.</li>
 <li>Zoom with the buttons, drag any edge or corner, or double click a wood side to return to 100%.</li></ul><div class="btns"><button id="x" class="on">Close</button></div>`,d=>d.querySelector('#x').onclick=closeDlg);
 $('#bSet').onclick=()=>openDlg(`<h3>Settings</h3>
 <div class="row"><label><input type="checkbox" id="sb" ${bubbles?'checked':''} style="width:auto"> Info bubbles after hovering</label></div>
@@ -801,10 +807,9 @@ $('#bpm').addEventListener('input',e=>{const v=parseFloat(e.target.value);if(v>=
 document.addEventListener('keydown',e=>{
   if(e.target.closest&&e.target.closest('input,textarea,select'))return;if(!back.hidden)return;
   if(!e.ctrlKey&&!e.metaKey&&!e.altKey&&codeNote[e.code]!==undefined){e.preventDefault();if(!e.repeat){down.add(codeNote[e.code]);noteOn(codeNote[e.code]);}return;}
-  if(e.key==='ArrowUp'&&!e.target.closest('.knob')){e.preventDefault();setBase(baseMidi+12);return;}
-  if(e.key==='ArrowDown'&&!e.target.closest('.knob')){e.preventDefault();setBase(baseMidi-12);return;}
+  if(!e.ctrlKey&&!e.metaKey&&!e.altKey&&e.code==='KeyZ'){e.preventDefault();if(!e.repeat)setBase(baseMidi-12);return;}
+  if(!e.ctrlKey&&!e.metaKey&&!e.altKey&&e.code==='KeyX'){e.preventDefault();if(!e.repeat)setBase(baseMidi+12);return;}
   if(e.code==='Space'&&!e.target.closest('button')){e.preventDefault();wake();hit();}
-  else if(e.key==='l'||e.key==='L'){wake();setLoop(!loopOn);}
   else if(e.key==='ArrowLeft'&&!e.target.closest('.knob')){step(-1);}
   else if(e.key==='ArrowRight'&&!e.target.closest('.knob')){step(1);}
 });
