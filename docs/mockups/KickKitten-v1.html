@@ -35,9 +35,9 @@ body{margin:0;color:var(--text);font:13px/1.35 "Barlow Condensed","Arial Narrow"
   overflow-x:hidden}
 #stage{display:flex;justify-content:center;width:100%}
 #wrap{position:relative;flex:none}
-#win{position:absolute;left:0;top:0;width:1120px;height:946px;transform-origin:0 0;background:var(--ground);overflow:hidden;
+#win{position:absolute;left:0;top:0;width:1120px;height:1066px;transform-origin:0 0;background:var(--ground);overflow:hidden;
   box-shadow:0 8px 30px #0008;user-select:none;-webkit-user-select:none}
-.cheek{position:absolute;top:0;width:52px;height:946px}
+.cheek{position:absolute;top:0;width:52px;height:1066px}
 .cheek.l{left:0}.cheek.r{right:0}
 #inner{position:absolute;left:52px;right:52px;top:0;bottom:0;display:flex;flex-direction:column;padding:8px 8px 4px;gap:8px}
 button,select,input{font:inherit;color:var(--text)}
@@ -86,6 +86,8 @@ button.chip:hover{border-color:var(--selb)}
 #meterCol h2{margin:0;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--title);text-align:center}
 #cvMeter{flex:1;min-height:0;width:100%;display:block}
 #pkRead{font:600 11px "JetBrains Mono",monospace;text-align:center;cursor:pointer;background:var(--display);border:1px solid var(--line);border-radius:3px;padding:1px 0}
+#pSauce{flex:none;height:112px}
+#ctlSauce{height:78px;gap:6px}
 #tops{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;height:138px;flex:none}
 .slot{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:4px 6px;display:flex;flex-direction:column;gap:3px;min-width:0}
 .slot.drag{border-color:var(--selb);background:var(--sel)}
@@ -219,6 +221,10 @@ button.chip:hover{border-color:var(--selb)}
       </aside>
     </div>
 
+    <section class="panel" id="pSauce">
+      <h2>Sauce <small>the glue, punch and loudness that make trance kicks hit hard; Amount 0 is off</small></h2>
+      <div class="ctl" id="ctlSauce"></div>
+    </section>
     <div id="tops" aria-label="Layers and tops"></div>
     <div id="keys">
       <div id="kctl">
@@ -248,7 +254,7 @@ button.chip:hover{border-color:var(--selb)}
 'use strict';
 const $=s=>document.querySelector(s);
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
-const W=1120,H=946;
+const W=1120,H=1066;
 const NOTE=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 function hz2note(f){const n=12*Math.log2(f/440)+69,r=Math.round(n);return{name:NOTE[((r%12)+12)%12]+(Math.floor(r/12)-1),cents:(n-r)*100};}
 const KEYS=[];for(let m=23;m<=39;m++)KEYS.push([NOTE[m%12]+(Math.floor(m/12)-1),440*Math.pow(2,(m-69)/12)]);
@@ -270,6 +276,13 @@ const SPEC=[
  {id:'trans',label:'Transistor',min:0,max:100,unit:' %',dec:0,def:10,tip:'Asymmetric saturation with even harmonics and extra low weight.'},
  {id:'fuzz',label:'Fuzz',min:0,max:100,unit:' %',dec:0,def:0,tip:'Smooth fuzz stage. Keep low for clean kicks, push for hard dance.'},
  {id:'clip',label:'Clip',min:0,max:100,unit:' %',dec:0,def:20,tip:'Soft clipper at the end. More clip makes the kick denser and louder without going over 0 dB.'},
+ {id:'sauce',label:'Amount',min:0,max:100,unit:' %',dec:0,def:0,tip:'Master amount of the Sauce chain. 0 is off. Raise it to blend in all the stages at once, then shape them with the knobs next to it.'},
+ {id:'sPunch',label:'Punch',min:0,max:100,unit:' %',dec:0,def:60,tip:'Saturates the 120 to 800 Hz band in parallel. That is where a kick is felt in the chest on small and large speakers. More punch, more body.'},
+ {id:'sThump',label:'Thump',min:0,max:100,unit:' %',dec:0,def:60,tip:'Saturates the sub below 120 Hz so the low note grows harmonics at 2 and 3 times its pitch. Gives weight you can hear on laptop speakers, and a little more low level.'},
+ {id:'sBloom',label:'Bloom',min:0,max:100,unit:' %',dec:0,def:50,tip:'A soft swell in the low tail at about 40 to 80 ms. Makes the kick breathe and pump, so the tail lifts after the hit instead of just dying away.'},
+ {id:'sCrack',label:'Crack',min:0,max:100,unit:' %',dec:0,def:40,tip:'Lifts and rounds the top band above 800 Hz, strongest in the first 10 ms. Sharper attack that cuts through a full mix.'},
+ {id:'sGlue',label:'Glue',min:0,max:100,unit:' %',dec:0,def:50,tip:'Heavy parallel compression blended under the kick. Fast attack and release, ratio about 10 to 1. Fills the gaps in the tail so the kick feels thick and solid.'},
+ {id:'sLoud',label:'Loud',min:0,max:100,unit:' %',dec:0,def:60,tip:'Makes the kick denser and louder while the peak stays the same: up to 6 dB more average level, with the peaks shaved smoothly instead of hard clipped.'},
  {id:'out',label:'Output',min:-24,max:6,unit:' dB',dec:1,def:0,tip:'Output level in dB. Watch the meter on the right.'}
 ];
 const LK=[];
@@ -438,6 +451,39 @@ function legacyToEnv(){
   for(let i=0;i<2;i++){const m=(T[i]+T[i+1])/2,a=pts[i][1],b=pts[i+1][1],v=(Math.log(fe(m))-Math.log(a))/(Math.log(b)-Math.log(a));
     if(isFinite(v)&&v>0.02&&v<0.98)pts[i][2]=clamp(Math.log2(Math.log(v)/Math.log(0.5))/2,-1,1);}
   return pts;}
+/* ---------- Sauce: parallel band saturation, tail bloom, glue and loudness, all offline at the oversampled rate ---------- */
+function sauceFx(x,fs,p){
+  const A=p.sauce/100;if(A<=0)return;
+  const N=x.length,k=n=>p[n]/100*A,kP=k('sPunch'),kT=k('sThump'),kB=k('sBloom'),kC=k('sCrack'),kG=k('sGlue'),kL=k('sLoud');
+  const lp4=(a,f)=>{const q1=bqMake('lp',f,fs),q2=bqMake('lp',f,fs);for(let i=0;i<a.length;i++)a[i]=bqRun(q2,bqRun(q1,a[i]));return a;};
+  const pkOf=a=>{let m=1e-9;for(let i=0;i<a.length;i++){const v=Math.abs(a[i]);if(v>m)m=v;}return m;};
+  const sat=(a,d)=>{const pk=pkOf(a),td=Math.tanh(d);for(let i=0;i<a.length;i++)a[i]=Math.tanh(d*a[i]/pk)*pk/td;};
+  const pk0=pkOf(x),m=Math.min(N,Math.floor(0.12*fs));
+  let rms0=0;for(let i=0;i<m;i++)rms0+=x[i]*x[i];
+  const low=lp4(Float32Array.from(x),110),rest=new Float32Array(N);for(let i=0;i<N;i++)rest[i]=x[i]-low[i];
+  const mid=lp4(Float32Array.from(rest),800),high=new Float32Array(N);for(let i=0;i<N;i++)high[i]=rest[i]-mid[i];
+  const sm=Float32Array.from(mid),sl=Float32Array.from(low),sh=Float32Array.from(high);
+  sat(sm,4);sat(sl,2.4);sat(sh,2.2);
+  const y=new Float32Array(N);
+  for(let i=0;i<N;i++){const t=i/fs;
+    const bl=1+kB*0.9*Math.exp(-Math.pow((t-0.06)/0.032,2));
+    const lo=(low[i]*(1-kT)+sl[i]*kT*1.1)*(1+0.2*kT)*bl;
+    const mi=mid[i]*(1-kP)+sm[i]*kP*1.12;
+    const hi=(high[i]*(1-kC)+sh[i]*kC)*(1+kC*(0.5+1.2*Math.exp(-t/0.006)));
+    y[i]=lo+mi+hi;}
+  if(kG>0){
+    const thr=0.22*pkOf(y),ca=Math.exp(-1/(0.004*fs)),cr=Math.exp(-1/(0.05*fs));let env=0;
+    const cmp=new Float32Array(N);let ry=0,rc=0;
+    for(let i=0;i<N;i++){const a=Math.abs(y[i]);env=a>env?ca*env+(1-ca)*a:cr*env+(1-cr)*a;
+      const g=env>thr?Math.pow(thr/env,1-1/10):1;cmp[i]=y[i]*g;if(i<m){ry+=y[i]*y[i];rc+=cmp[i]*cmp[i];}}
+    const mk=rc>1e-12?Math.sqrt(ry/rc):1,w=0.65*kG;
+    for(let i=0;i<N;i++)y[i]=y[i]*(1-w)+cmp[i]*mk*w;}
+  if(kL>0){
+    const gain=Math.pow(10,6*kL/20),kn=0.5*pk0,cl=0.95*pk0;
+    for(let i=0;i<N;i++){const v=y[i]*gain,a=Math.abs(v);y[i]=a<kn?v:Math.sign(v)*(kn+(cl-kn)*Math.tanh((a-kn)/(cl-kn)));}}
+  const pk1=pkOf(y),sc=pk0/pk1;
+  for(let i=0;i<N;i++)x[i]=y[i]*sc;
+}
 /* ---------- engine: offline render at 4x, decimate ---------- */
 const OS=4;
 function renderKick(p,sr){
@@ -478,6 +524,7 @@ function renderKick(p,sr){
     const mk=ro>1e-12?clamp(Math.sqrt(ri/ro),0.4,2.5):1;
     for(let i=0;i<N;i++)x[i]=y[i]*mk;
   }
+  sauceFx(x,fs,p);
   // clip (smooth, normalised so full scale stays full scale) and DC block
   const c=p.clip/100,gc=1+3*c,tg=Math.tanh(gc),R=1-twoPi*8/fs;
   let px=0,py=0;
@@ -623,12 +670,17 @@ function syncKey(){
   const g5=group($('#ctlWave'),'Amp');['hold','decay'].forEach(i=>mkKnob(g5,i));
   const g6=group($('#ctlSpec'),'Purr Trio');['drive','trans','fuzz'].forEach(i=>mkKnob(g6,i));
   const g7=group($('#ctlSpec'));mkKnob(g7,'clip');
+  {const c=$('#ctlSauce');mkKnob(group(c,'Master'),'sauce',true);
+   const gb=group(c,'Low and body');['sThump','sBloom','sPunch'].forEach(i=>mkKnob(gb,i,true));
+   const gt=group(c,'Top');mkKnob(gt,'sCrack',true);
+   const gl=group(c,'Loudness');['sGlue','sLoud'].forEach(i=>mkKnob(gl,i,true));}
   const g8=group($('#ctlOut'));mkKnob(g8,'out');
   const pb=document.createElement('div');pb.className='cell';
   pb.innerHTML='<div class="kl">Polarity</div>';
   const pbtn=document.createElement('button');pbtn.id='polBtn';pbtn.textContent='Ø';pbtn.dataset.tip='Flip the polarity of the kick. If the kick and the bass cancel each other and the low end sounds thin, flip one of them and compare.';
   pbtn.addEventListener('click',()=>{P.pol*=-1;dirty=true;presetEdited();});pb.appendChild(pbtn);g8.appendChild(pb);
   const pk=document.createElement('div');pk.className='cell';pk.innerHTML='<div class="kl">Render peak</div><span class="chip" id="rpk">-</span>';g8.appendChild(pk);
+  const lv=document.createElement('div');lv.className='cell';lv.innerHTML='<div class="kl">Body level</div><span class="chip" id="rrms" data-tip="Average level of the first 120 ms. This is the loudness you feel. Sauce raises it while the peak stays put.">-</span>';g8.appendChild(lv);
 }
 syncKey();
 /* layers UI */
@@ -924,6 +976,7 @@ function updateChips(){
   const pdb=pk>0?20*Math.log10(pk):-99;
   $('#chips').innerHTML=`<span class="chip">Tail ends ${te.toFixed(0)} ms</span><span class="chip">${pct.toFixed(0)}% of a 16th (${sx.toFixed(1)} ms)</span><span class="chip">1st cycle ${first>=0?'▲ +':'▼ -'}</span>`;
   $('#rpk').textContent=pdb.toFixed(1)+' dB';$('#rpk').style.color=dbCol(pdb);
+  {const n=Math.min(buf.length,Math.floor(0.12*sr));let s=0;for(let i=0;i<n;i++)s+=buf[i]*buf[i];const rd=10*Math.log10(s/Math.max(1,n)+1e-12);$('#rrms').textContent=rd.toFixed(1)+' dB';$('#rrms').style.color=dbCol(rd);}
   $('#polBtn').classList.toggle('on',P.pol<0);
 }
 function refresh(){
@@ -1012,6 +1065,7 @@ const FACTORY=[
  mk('Punchy Click','punchy',Object.assign(D(),{tailHz:55,startHz:1000,sweep:24,curve:0.9,clickLvl:80,clickFreq:4500,clickLen:5,body:100,sub:70,hold:10,decay:120,drive:20,trans:10,fuzz:5,clip:30,l0src:3,l0lvl:35,l0len:20,l0hp:2000})),
  mk('Subby Deep','sub',Object.assign(D(),{tailHz:46.249,startHz:600,sweep:40,curve:1.3,clickLvl:25,clickFreq:2000,clickLen:3,body:55,sub:100,hold:15,decay:190,drive:8,trans:0,fuzz:0,clip:10})),
  mk('Hard Dance','hard',Object.assign(D(),{tailHz:61.735,startHz:1200,sweep:22,curve:0.8,clickLvl:90,clickFreq:5000,clickLen:6,body:100,sub:80,hold:10,decay:110,drive:45,trans:30,fuzz:20,clip:55,l0src:4,l0lvl:30,l0len:20,l0hp:1500,l1src:5,l1lvl:25,l1len:30,l1hp:6000,l1delay:2})),
+ mk('Phat Trance','phat',Object.assign(D(),{tailHz:55,startHz:1100,sweep:26,curve:0.9,clickLvl:55,clickFreq:4200,clickLen:4,body:100,sub:85,hold:12,decay:150,drive:25,trans:15,fuzz:5,clip:30,sauce:75,sPunch:65,sThump:65,sBloom:55,sCrack:45,sGlue:55,sLoud:65})),
  mk('Init','init',D())
 ];
 let user=[];try{user=JSON.parse(localStorage.getItem('kk-user')||'[]');}catch(e){user=[];}
