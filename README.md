@@ -45,3 +45,8 @@ The Sauce panel runs a chain inside the render: band split (sub below 110 Hz, bo
 
 ## v1.16
 - 45 "Trance attacks" and 45 "Trance clicks" are built into the plugin, in the layer menu (first folders). They are the first 70 ms and the first 30 ms (high-passed) of 45 trance kicks from a royalty-free sample pack the author bought and has licensed for commercial use. Everything ships inside the one installer, no loose files.
+
+## v1.17
+- Built-in chops renamed and moved into the normal groups: "Kick attacks" (Kick attack 1 to 45), "Clicks" (Kick click 1 to 45), "Kicks" (Kick 1, Kick 2, and others). No pack or brand names anywhere.
+- 10 new trance presets that use those attacks and clicks (Trance Snap, Pop, Tick, Knock, Crack, Sizzle, Long, Deep, Rolling, Hard).
+- New Swell knob (Fall group): the low body grows in over the first ms like real trance kicks. Fixes boxy low mids.
