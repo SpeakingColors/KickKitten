@@ -118,6 +118,22 @@ void KickProcessor::setOwnSample (int layer, const juce::File& f, juce::String& 
     presetEdited = true; requestRender();
 }
 
+std::vector<float> KickProcessor::renderOffline (const Params& p, double& rate)
+{
+    std::shared_ptr<kk::Sample> ownCopy[3];
+    { const juce::ScopedLock sl (stateLock); for (int i = 0; i < 3; ++i) ownCopy[i] = own[i]; }
+    auto lookup = [&] (int layer, int s) -> const Sample* { return s == 7 ? ownCopy[layer].get() : bank.get (s); };
+    rate = sr.load(); return renderKick (p, rate, lookup, nullptr);
+}
+
+Params KickProcessor::matchTo (const RefInfo& ref, const std::function<void(int)>& progress, const std::atomic<bool>* stop)
+{
+    std::shared_ptr<kk::Sample> ownCopy[3];
+    { const juce::ScopedLock sl (stateLock); for (int i = 0; i < 3; ++i) ownCopy[i] = own[i]; }
+    auto lookup = [&] (int layer, int s) -> const Sample* { return s == 7 ? ownCopy[layer].get() : bank.get (s); };
+    Params p = snapshot(); matchToRef (p, sr.load(), lookup, ref, progress, stop); return p;
+}
+
 //==============================================================================
 // Background render: the base kick first, then the keyboard notes one by one.
 std::shared_ptr<const KickResult> KickProcessor::renderBase (const Params& p, double rate)
@@ -139,6 +155,29 @@ std::shared_ptr<const KickResult> KickProcessor::renderBase (const Params& p, do
     return r;
 }
 
+void KickProcessor::syncEnvFromKnobs()
+{
+    if (syncHold.load() > 0) return;
+    const int ids[4] = { id::startHz, id::tailHz, id::sweep, id::curve };
+    double now[4]; for (int i = 0; i < 4; ++i) now[i] = (double) *raw[(size_t) ids[i]];
+    const juce::ScopedLock sl (stateLock);
+    if (env.size() >= 2)
+    {
+        const size_t n = env.size();
+        if (now[0] != lastSync[0]) env[0].hz = now[0];
+        if (now[1] != lastSync[1]) env[n - 1].hz = now[1];
+        if (now[2] != lastSync[2] && lastSync[2] > 0)
+        {
+            double r = now[2] / lastSync[2]; if (env[n - 1].ms * r > 100) r = 100 / env[n - 1].ms;
+            double gap = 1e9; for (size_t i = 1; i < n; ++i) gap = std::min (gap, env[i].ms - env[i - 1].ms);
+            if (gap * r < 1) r = 1 / gap;
+            for (size_t i = 1; i < n; ++i) env[i].ms = std::min (100.0, env[i].ms * r);
+        }
+        if (now[3] != lastSync[3] && lastSync[3] > 0) { const double d = std::log2 (now[3] / lastSync[3]) / 2; for (size_t i = 0; i + 1 < n; ++i) env[i].bend = juce::jlimit (-1.0, 1.0, env[i].bend + d); }
+    }
+    for (int i = 0; i < 4; ++i) lastSync[i] = now[i];
+}
+
 void KickProcessor::run()
 {
     uint64_t done = 0; std::shared_ptr<const Published> pub; int sweepNext = 0; Params cur;
@@ -147,7 +186,7 @@ void KickProcessor::run()
         const uint64_t g = gen.load();
         if (g != done)
         {
-            cur = snapshot(); const double rate = sr.load();
+            syncEnvFromKnobs(); cur = snapshot(); const double rate = sr.load();
             auto base = renderBase (cur, rate);
             if (threadShouldExit()) break;
             auto np = std::make_shared<Published>(); np->base = base; np->gen = g;
@@ -289,6 +328,7 @@ juce::ValueTree KickProcessor::currentTree()
 
 void KickProcessor::loadStateTree (const juce::ValueTree& t, bool keepName)
 {
+    syncHold++;
     for (int i = 0; i < id::NPARAMS; ++i) if (auto* p = apvts.getParameter (SPEC[i].id)) p->setValueNotifyingHost (p->getDefaultValue());
     for (auto c : t) if (c.hasType ("PARAM"))
         if (auto* p = apvts.getParameter (c.getProperty ("id").toString())) p->setValueNotifyingHost (p->convertTo0to1 ((float) (double) c.getProperty ("value")));
@@ -307,6 +347,8 @@ void KickProcessor::loadStateTree (const juce::ValueTree& t, bool keepName)
       if (env.size() < 2) env.clear(); }
     keyMode = (int) t.getProperty ("keyMode", 1); baseMidi = juce::jlimit (24, 60, (int) t.getProperty ("baseMidi", 24)); bassRoot = (int) t.getProperty ("bassRoot", -1);
     if (! keepName) { presetName = t.getProperty ("presetName", "").toString(); factoryIndex = (int) t.getProperty ("factoryIndex", -1); }
+    { const juce::ScopedLock sl (stateLock); const int ids[4] = { id::startHz, id::tailHz, id::sweep, id::curve }; for (int i = 0; i < 4; ++i) lastSync[i] = (double) *raw[(size_t) ids[i]]; }
+    syncHold--;
     presetEdited = false; requestRender();
 }
 

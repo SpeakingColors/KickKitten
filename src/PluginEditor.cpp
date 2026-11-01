@@ -1,4 +1,5 @@
 #include "PluginEditor.h"
+#include <thread>
 #include <functional>
 #include <BinaryData.h>
 
@@ -233,6 +234,13 @@ struct KickEditor::Content : public Component, private Timer
     std::vector<EnvDot> dragEnv; int dragK = -1; int dragType = 0; // 0 none, 1 dot, 2 segment
     double dragOx = 0, dragOy = 0, dragSeg = 0;
     std::vector<float> refMags; double refSr = 44100; String refName;
+    RefInfo refInfo; Btn* matchBtn = nullptr; std::thread matchTh; std::atomic<bool> matchStop { false }, matching { false }; std::atomic<int> matchPct { 0 };
+    void runMatch();
+    // Render tab
+    std::vector<float> rendBuf; double rendSr = 44100, rendHz = 55; uint64_t rendGen = 0; int rendKey = -1;
+    Canvas* cvRender = nullptr; Btn *rKeyBtn = nullptr, *rGenBtn = nullptr; Chip *chipRInfo = nullptr, *chipRStale = nullptr; TextEditor rVelBox;
+    void genRender(); void exportRender(); void dragRenderOut(); void updateRenderChips();
+    ~Content() override { matchStop = true; if (matchTh.joinable()) matchTh.join(); }
     std::vector<int> order;
     juce::FileChooser* chooser = nullptr; std::unique_ptr<FileChooser> chooserHolder;
     std::unique_ptr<AlertWindow> dlg;
@@ -575,11 +583,16 @@ void KickEditor::Content::buildScopes()
     });
     addBtn (byId ("refBtn"), BS::mini, "Reference", [this]
     {
-        if (! refMags.empty()) { refMags.clear(); refMsg = {}; cvSpec->repaint(); return; }
+        if (! refMags.empty()) { matchStop = true; refMags.clear(); refMsg = {}; if (refBtn) refBtn->text = "Reference"; if (matchBtn) matchBtn->setVisible (false); refBtn->repaint(); cvSpec->repaint(); return; }
         chooserHolder = std::make_unique<FileChooser> ("Pick a kick to compare with", File(), "*.wav;*.flac;*.aif;*.aiff;*.ogg;*.mp3");
         chooserHolder->launchAsync (FileBrowserComponent::openMode | FileBrowserComponent::canSelectFiles, [this] (const FileChooser& fc) { if (fc.getResult().existsAsFile()) loadReference (fc.getResult()); });
     })->tip = byId ("refBtn")->tip;
     refBtn = btns.getLast();
+    {
+        auto* mb = addBtn (nullptr, BS::mini, "Match", [this] { runMatch(); }); mb->setBounds (861, 55, 48, 18);
+        mb->tip = "Moves Decay, Shape, Hold, Swell, Tone EQ, Thump, Punch, Crack and the click settings, and sets Tail, so our spectrum and level shape get closer to the reference. Starts from the current sound; you can undo by loading the preset again.";
+        mb->setVisible (false); matchBtn = mb;
+    }
 
     // waveform
     cvWave = addCanvas (byId ("cvWave"), [this] (Graphics& g, int w, int h)
@@ -758,7 +771,7 @@ void KickEditor::Content::buildPlay()
 void KickEditor::Content::buildGlueRender()
 {
     tabGlue = addBtn (byId ("tabGlue"), BS::normal, "GLUE & LIMITER", [this] { renderTab = 0; refreshUi(); });
-    tabRender = addBtn (byId ("tabRender"), BS::normal, "RENDER", [this] { renderTab = 1; refreshUi(); });
+    tabRender = addBtn (byId ("tabRender"), BS::normal, "RENDER", [this] { renderTab = 1; if (rendBuf.empty()) genRender(); refreshUi(); });
     cvGlue = addCanvas (byId ("cvGlue"), [this] (Graphics& g, int w, int h)
     {
         if (! pub || ! pub->base) return; const auto& GL = pub->base->glue; const double l = 30, r = w - 6, wd = r - l; const int nb = GlueInfo::nb;
@@ -781,8 +794,41 @@ void KickEditor::Content::buildGlueRender()
     chipGPk = addChip (byId ("gPk")); chipGGr = addChip (byId ("gGr"));
     limBtn = addBtn (byId ("limBtn"), BS::chip, "Limiter Off", [this] { proc.setParam ("lim", proc.getParam (id::lim) > 0.5 ? 0.0 : 1.0); refreshUi(); });
     // render tab
-    renderSave = new Btn (*this, BS::normal, "Save 24-bit .wav"); renderSave->setBounds (1275, 360, 232, 30); renderSave->onClick = [this] { exportWav(); }; renderSave->tip = "Save the finished kick as a 24-bit mono .wav file."; addChildComponent (renderSave); btns.add (renderSave);
-    renderCopy = new Btn (*this, BS::normal, "Copy sound as text"); renderCopy->setBounds (1275, 398, 232, 30); renderCopy->onClick = [this] { doExport(); }; renderCopy->tip = "Copy this sound as text you can paste into another Kick Kitten."; addChildComponent (renderCopy); btns.add (renderCopy);
+    cvRender = canvases.add (new Canvas (*this)); cvRender->setBounds (1275, 124, 232, 160); cvRender->tip = "The rendered kick. Drag this waveform into your DAW or a folder to drop it as a .wav file."; addChildComponent (cvRender);
+    cvRender->draw = [this] (Graphics& g, int w, int h)
+    {
+        const double l = 34, r = w - 6, t = 8, b = h - 16, mid = (t + b) / 2; const size_t n = rendBuf.size();
+        if (n == 0) { txt (g, "not rendered", w / 2.f, h / 2.f, col::dim, Justification::centred, 11.f); return; }
+        g.setColour (col::grid);
+        const struct { double a; const char* s; } ax[] = { { 1, "0" }, { .5, "-6" }, { 0, "-inf" }, { -.5, "-6" }, { -1, "0" } };
+        for (auto& q : ax) { const float y = (float) (mid - q.a * (b - t) / 2); g.setColour (col::grid); g.drawHorizontalLine ((int) y, (float) l, (float) r); txt (g, q.s, (float) l - 4, y + 3, col::cap, Justification::right); }
+        const double ms = (double) n / rendSr * 1000, stepMs = ms > 400 ? 100 : 50;
+        for (double k = 0; k <= ms; k += stepMs) { const float x = (float) (l + k / ms * (r - l)); g.setColour (col::grid); g.drawVerticalLine ((int) x, (float) t, (float) b); txt (g, String ((int) k), x, (float) b + 11, col::cap, Justification::centred); }
+        txt (g, "ms", (float) l - 4, (float) b + 11, col::cap, Justification::right);
+        g.setColour (col::curve); const int W = (int) (r - l);
+        for (int px = 0; px < W; ++px)
+        {
+            const size_t i0 = (size_t) ((double) px / W * (double) n), i1 = std::max (i0 + 1, (size_t) ((double) (px + 1) / W * (double) n)); float mx = -1, mn = 1;
+            for (size_t i = i0; i < i1 && i < n; ++i) { mx = std::max (mx, rendBuf[i]); mn = std::min (mn, rendBuf[i]); }
+            const float y1 = (float) (mid - mx * (b - t) / 2), y2 = (float) (mid - mn * (b - t) / 2); g.fillRect ((float) (l + px), y1, 1.f, std::max (1.f, y2 - y1));
+        }
+    };
+    cvRender->onDragFn = [this] (const MouseEvent& e) { if (e.getDistanceFromDragStart() > 6 && ! dragStarted && ! rendBuf.empty()) { dragStarted = true; dragRenderOut(); } };
+    chipRInfo = addChipAt (Rectangle<int> (1275, 292, 232, 19)); chipRInfo->text = "not rendered"; chipRInfo->setVisible (false);
+    chipRStale = addChipAt (Rectangle<int> (1275, 314, 232, 19)); chipRStale->text = "out of date, press Generate"; chipRStale->colour = col::warn; chipRStale->setVisible (false);
+    rKeyBtn = addBtn (nullptr, BS::normal, "Current", [this]
+    {
+        PopupMenu m; m.addItem (1, "Current (Tail note)"); for (int mi = 24; mi <= 60; ++mi) m.addItem (100 + mi, String (kNoteNames[mi % 12]) + String (mi / 12 - 1));
+        m.showMenuAsync (PopupMenu::Options().withTargetComponent (rKeyBtn), [this] (int r) { if (r == 1) rendKey = -1; else if (r >= 100) rendKey = r - 100; else return; rKeyBtn->text = rendKey < 0 ? String ("Current") : String (kNoteNames[rendKey % 12]) + String (rendKey / 12 - 1); rKeyBtn->repaint(); });
+    });
+    rKeyBtn->setBounds (1325, 340, 182, 26); rKeyBtn->tip = "The note the kick is rendered at. Current uses your Tail note."; rKeyBtn->setVisible (false);
+    rVelBox.setInputRestrictions (3, "0123456789"); rVelBox.setJustification (Justification::centred); rVelBox.setFont (mono (12.f)); rVelBox.setText ("127", false);
+    rVelBox.setColour (TextEditor::backgroundColourId, col::display); rVelBox.setColour (TextEditor::outlineColourId, col::line); rVelBox.setColour (TextEditor::textColourId, col::text);
+    rVelBox.setBounds (1325, 374, 70, 26); rVelBox.setTooltip ("Velocity from 1 to 127. 127 is full level, lower is quieter."); rVelBox.onFocusLost = [this] { rVelBox.setText (String (jlimit (1, 127, rVelBox.getText().getIntValue() > 0 ? rVelBox.getText().getIntValue() : 127)), false); };
+    addChildComponent (rVelBox);
+    rGenBtn = addBtn (nullptr, BS::normal, "Generate", [this] { genRender(); }); rGenBtn->setBounds (1275, 414, 232, 30); rGenBtn->tip = "Render the kick now at this key and velocity."; rGenBtn->setVisible (false);
+    renderSave = new Btn (*this, BS::normal, "Export .wav"); renderSave->setBounds (1275, 452, 232, 30); renderSave->onClick = [this] { exportRender(); }; renderSave->tip = "Save the rendered kick as a 24-bit mono .wav file."; addChildComponent (renderSave); btns.add (renderSave);
+    renderCopy = new Btn (*this, BS::normal, "Copy sound as text"); renderCopy->setBounds (1275, 490, 232, 30); renderCopy->onClick = [this] { doExport(); }; renderCopy->tip = "Copy this sound as text you can paste into another Kick Kitten."; addChildComponent (renderCopy); btns.add (renderCopy);
     for (auto* b : { tabGlue, tabRender }) b->setVisible (true);
     for (auto* k : knobs) { const String id (SPEC[k->idx].id); if (id == "sGlue" || id == "gThr" || id == "gRat" || id == "gAtk" || id == "gRel" || id == "limG") glueGroup.push_back (k); }
     for (auto* c : { (Component*) cvGlue, (Component*) chipGPk, (Component*) chipGGr, (Component*) limBtn }) glueGroup.push_back (c);
@@ -865,16 +911,40 @@ void KickEditor::Content::paint (Graphics& g)
     }
     if (renderTab == 1)
     {
-        g.setColour (col::text); g.setFont (sans (13.f, true, 0.14f)); g.drawText ("RENDER", 1284, 100, 220, 18, Justification::centredLeft, false);
-        g.setColour (col::cap); g.setFont (sans (12.f, false, 0.03f)); g.drawFittedText ("The whole kick, ready to save. Drag the waveform on the left into your DAW, or save it here as a 24-bit mono .wav.", Rectangle<int> (1284, 122, 214, 80), Justification::topLeft, 5);
-        if (pub && pub->base)
-        {
-            g.setColour (col::text); g.setFont (mono (12.f));
-            int y = 214; auto line = [&] (const String& s) { g.drawText (s, 1284, y, 220, 18, Justification::centredLeft, false); y += 22; };
-            line ("Length " + num (pub->base->pcm.size() / pub->base->sr * 1000.0, 0) + " ms"); line ("Sample rate " + String (pub->base->sr / 1000.0, 1) + " kHz");
-            line ("True peak " + dbStr (pub->base->tp > 0 ? 20 * std::log10 (pub->base->tp) : -99.0)); line ("RMS " + dbStr (pub->base->rms)); line ("LUFS " + String (pub->base->lufs, 1));
-        }
+        g.setColour (col::text); g.setFont (sans (13.f, true, 0.14f)); g.drawText ("RENDER", 1284, 100, 90, 18, Justification::centredLeft, false);
+        g.setColour (col::cap); g.setFont (sans (12.f, false, 0.03f)); g.drawText ("The whole kick, ready to save", 1352, 100, 156, 18, Justification::centredLeft, false);
+        g.setColour (col::dim); g.setFont (sans (11.f, false, 0.1f)); g.drawText ("KEY", 1275, 340, 46, 26, Justification::centredLeft, false); g.drawText ("VEL", 1275, 374, 46, 26, Justification::centredLeft, false);
+        g.setColour (col::cap); g.setFont (sans (12.f, false, 0.03f)); g.drawFittedText ("Generate, then Export, or drag the waveform straight into your DAW.", Rectangle<int> (1275, 534, 232, 50), Justification::topLeft, 3);
     }
+}
+
+namespace { String wavNameFor (const String& preset, double hz); bool writeWav (const File& f, const std::vector<float>& pcm, double sr); }
+void KickEditor::Content::genRender()
+{
+    Params P = proc.snapshot(); Params q = P; double hz = P[id::tailHz];
+    if (rendKey >= 0) { const double f = 440.0 * std::pow (2.0, (rendKey - 69) / 12.0), ratio = f / P[id::tailHz]; q[id::tailHz] = f; q[id::startHz] = P[id::startHz] * ratio; for (auto& d : q.env) d.hz *= ratio; hz = f; }
+    rendBuf = proc.renderOffline (q, rendSr); rendHz = hz;
+    const float vel = (float) jlimit (1, 127, rVelBox.getText().getIntValue() > 0 ? rVelBox.getText().getIntValue() : 127) / 127.f; for (auto& v : rendBuf) v *= vel;
+    rendGen = proc.paramGen(); updateRenderChips(); if (cvRender) cvRender->repaint();
+}
+void KickEditor::Content::updateRenderChips()
+{
+    if (! chipRInfo) return;
+    if (rendBuf.empty()) chipRInfo->text = "not rendered";
+    else { float pk = 0; for (float v : rendBuf) pk = std::max (pk, std::abs (v)); chipRInfo->text = num ((double) rendBuf.size() / rendSr * 1000.0, 0) + " ms  peak " + num (20 * std::log10 (pk + 1e-9), 1) + " dB  " + hz2note (rendHz).name; }
+    chipRInfo->repaint(); chipRStale->setVisible (renderTab == 1 && ! rendBuf.empty() && rendGen != proc.paramGen()); chipRStale->repaint();
+}
+void KickEditor::Content::exportRender()
+{
+    if (rendBuf.empty()) genRender(); auto keep = std::make_shared<std::vector<float>> (rendBuf); const double sr2 = rendSr;
+    chooserHolder = std::make_unique<FileChooser> ("Save the kick as a .wav", File::getSpecialLocation (File::userMusicDirectory).getChildFile (wavNameFor (proc.presetName, rendHz)), "*.wav");
+    chooserHolder->launchAsync (FileBrowserComponent::saveMode | FileBrowserComponent::canSelectFiles | FileBrowserComponent::warnAboutOverwriting, [keep, sr2] (const FileChooser& fc)
+    { auto f = fc.getResult(); if (f == File()) return; if (! f.hasFileExtension ("wav")) f = f.withFileExtension ("wav"); if (! writeWav (f, *keep, sr2)) AlertWindow::showMessageBoxAsync (MessageBoxIconType::WarningIcon, "Export", "Could not write that file."); });
+}
+void KickEditor::Content::dragRenderOut()
+{
+    auto f = File::getSpecialLocation (File::tempDirectory).getChildFile ("Kick Kitten").getChildFile (wavNameFor (proc.presetName, rendHz));
+    f.getParentDirectory().createDirectory(); if (writeWav (f, rendBuf, rendSr)) DragAndDropContainer::performExternalDragDropOfFiles ({ f.getFullPathName() }, false, this, [this] { dragStarted = false; });
 }
 
 void KickEditor::Content::timerCallback()
@@ -929,7 +999,7 @@ void KickEditor::Content::refreshUi()
     { const int s = proc.getSrc (l); pickBtn[l]->text = s == 7 ? "Sample: " + proc.ownName (l) : srcName (s); plBtn[l]->on = proc.getLayerPol (l) < 0; }
     if (envResetBtn) envResetBtn->setVisible (proc.getEnv().size() >= 2);
     for (auto* c : glueGroup) c->setVisible (renderTab == 0);
-    if (renderSave) { renderSave->setVisible (renderTab == 1); renderCopy->setVisible (renderTab == 1); }
+    if (renderSave) { for (auto* c : std::initializer_list<Component*> { renderSave, renderCopy, cvRender, chipRInfo, rKeyBtn, &rVelBox, rGenBtn }) c->setVisible (renderTab == 1); updateRenderChips(); }
     if (tabGlue) { tabGlue->on = renderTab == 0; tabRender->on = renderTab == 1; }
     for (auto* c : chips) c->repaint();
     for (auto* b : btns) b->repaint();
@@ -1075,6 +1145,31 @@ void KickEditor::Content::dragWavOut()
     auto f = File::getSpecialLocation (File::tempDirectory).getChildFile ("Kick Kitten").getChildFile (wavNameFor (proc.presetName, proc.getParam (id::tailHz)));
     f.getParentDirectory().createDirectory(); if (writeWav (f, pub->base->pcm, pub->base->sr)) DragAndDropContainer::performExternalDragDropOfFiles ({ f.getFullPathName() }, false, this, [this] { dragStarted = false; });
 }
+void KickEditor::Content::runMatch()
+{
+    if (matching.load() || refMags.empty()) return;
+    if (matchTh.joinable()) matchTh.join();
+    matching = true; matchStop = false; matchPct = 0; if (matchBtn) { matchBtn->disabled = true; matchBtn->repaint(); }
+    const RefInfo ri = refInfo; SafePointer<Component> self (this);
+    matchTh = std::thread ([this, ri, self]
+    {
+        auto prog = [this, self] (int p) { if (p == matchPct.load()) return; matchPct = p; MessageManager::callAsync ([this, self, p] { if (self != nullptr) { refMsg = "matching " + String (p) + "%"; cvSpec->repaint(); } }); };
+        const Params res = proc.matchTo (ri, prog, &matchStop);
+        const bool stopped = matchStop.load();
+        MessageManager::callAsync ([this, self, res, stopped]
+        {
+            if (self == nullptr) return;
+            if (! stopped)
+            {
+                static const int ids[] = { id::tailHz, id::decay, id::ampShape, id::hold, id::swell, id::eMud, id::eChest, id::eShine, id::sThump, id::sPunch, id::sCrack, id::clickLvl, id::clickFreq, id::clickLen };
+                for (int i : ids) proc.setParam (SPEC[i].id, res[i]);
+                refMsg = "matched to " + refName.substring (0, 22);
+                proc.requestRender (); refreshUi();
+            }
+            matching = false; if (matchBtn) { matchBtn->disabled = false; matchBtn->repaint(); } cvSpec->repaint();
+        });
+    });
+}
 void KickEditor::Content::loadReference (const File& f)
 {
     AudioFormatManager fm; fm.registerBasicFormats(); std::unique_ptr<AudioFormatReader> rd (fm.createReaderFor (f)); if (! rd) { refMsg = "could not read"; cvSpec->repaint(); return; }
@@ -1085,7 +1180,10 @@ void KickEditor::Content::loadReference (const File& f)
     constexpr int NF = 16384; dsp::FFT fft (14); std::vector<float> d ((size_t) NF * 2, 0.f); double ws = 0; const size_t nn = std::min (t.size(), (size_t) NF);
     for (int i = 0; i < NF; ++i) { const double w = 0.5 * (1 + std::cos (MathConstants<double>::pi * i / NF)); ws += w; if ((size_t) i < nn) d[(size_t) i] = (float) (t[(size_t) i] * w); }
     fft.performFrequencyOnlyForwardTransform (d.data()); refMags.resize (NF / 2); for (int k = 0; k < NF / 2; ++k) refMags[(size_t) k] = (float) (2.0 * d[(size_t) k] / ws);
-    refSr = rd->sampleRate; refName = f.getFileNameWithoutExtension(); refMsg = "reference: " + refName; if (refBtn) refBtn->text = "Clear"; cvSpec->repaint();
+    refSr = rd->sampleRate; refName = f.getFileNameWithoutExtension(); refMsg = "reference: " + refName; if (refBtn) refBtn->text = "Clear";
+    if (makeRef (m, rd->sampleRate, refInfo)) { refMsg = "ref: " + refName.substring (0, 22) + " (tail " + String (refInfo.tail, 1) + " Hz)"; if (matchBtn) matchBtn->setVisible (true); }
+    else refMsg = "that file is silent";
+    cvSpec->repaint();
 }
 
 //==============================================================================
@@ -1130,6 +1228,11 @@ KickEditor::KickEditor (KickProcessor& p) : AudioProcessorEditor (p), proc (p)
     const int w = proc.editorWidth > 0 ? jlimit (700, 2600, proc.editorWidth) : kDefaultW;
     setSize (w, (int) std::lround (w * (double) kH / kW));
     content->grabKeyboardFocus();
+}
+void KickEditor::showForTest (bool renderTab, const File& reference)
+{
+    if (reference.existsAsFile()) content->loadReference (reference);
+    if (renderTab) { content->renderTab = 1; content->genRender(); content->refreshUi(); }
 }
 KickEditor::~KickEditor() { content.reset(); }
 void KickEditor::timerCallback() {}

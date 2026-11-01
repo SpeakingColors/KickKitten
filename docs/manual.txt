@@ -11,6 +11,8 @@ This is a test build. The sound engine was checked by numbers against the mockup
 - Set Tail to the root note of your track, so kick and bass add up instead of fighting.
 - Shape the pitch with the pitch envelope: drag a dot, drag the line to bend it, double click to add or remove a dot.
 - In your DAW, play any MIDI note. Same plays the same kick on every key; Pitched re-renders the kick for each note.
+- Load a kick you like with Reference  to see its spectrum in amber, then press Match to move Decay, Shape, Hold, Swell, Tone EQ, Thump, Punch, Crack and the click settings toward it. Start from the sound you have; load the preset again to undo.
+- The Render tab renders the kick at a chosen key and velocity; save it with Export .wav or drag its waveform into your DAW.
 - Drag the waveform into your DAW to drop the kick as a .wav, or use Export for a 24-bit mono .wav.
 
 # Recommendations

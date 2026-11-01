@@ -46,5 +46,18 @@ int main()
     // every factory preset renders without NaN and under the ceiling
     bool ok = true; for (int i = 0; i < kFactoryCount; ++i) { q.loadFactory (i); const auto sn = q.snapshot(); auto lookup = [&] (int, int s) -> const kk::Sample* { return q.bank.get (s); }; auto r = kk::renderKick (sn, 44100.0, lookup); float pk = 0; for (float v : r) { if (! std::isfinite (v)) ok = false; pk = std::max (pk, std::abs (v)); } if (pk > 0.9999f || pk < 0.05f) ok = false; }
     CHECK (ok, "all factory presets render finite, audible and under full scale");
+    // knobs move the pitch dots (as in the mockup)
+    { KickProcessor m; m.loadFactory (0); juce::Thread::sleep (600); const auto e0 = m.getEnv(); CHECK (e0.size() >= 2, "factory preset has pitch dots");
+      m.setParam ("tailHz", 48.0); m.setParam ("startHz", 1200.0); juce::Thread::sleep (800); const auto e1 = m.getEnv();
+      CHECK (std::abs (e1.back().hz - 48.0) < 0.01 && std::abs (e1.front().hz - 1200.0) < 0.01, "Tail and Start knobs move the first and last dot");
+      std::printf ("      last dot %g -> %g, first %g -> %g\n", e0.back().hz, e1.back().hz, e0.front().hz, e1.front().hz);
+      m.loadFactory (1); juce::Thread::sleep (600); const auto e2 = m.getEnv(); m.loadFactory (1); juce::Thread::sleep (300); CHECK (m.getEnv().size() == e2.size() && std::abs (m.getEnv().back().hz - e2.back().hz) < 1e-9, "loading a preset does not rewrite its dots"); }
+    // reference match through the processor: a known kick as reference, start from another one
+    { KickProcessor m; m.loadFactory (0); auto sn = m.snapshot(); sn[kk::id::decay] = 380; sn[kk::id::tailHz] = 50; sn.env.clear(); auto lookup = [&] (int, int s2) -> const kk::Sample* { return m.bank.get (s2); };
+      auto ref = kk::renderKick (sn, 44100.0, lookup); kk::RefInfo ri; const bool mk = kk::makeRef (ref, 44100.0, ri); CHECK (mk && std::abs (ri.tail - 50) < 3, "reference tail pitch is found");
+      m.loadFactory (1); const auto before = m.snapshot(); const auto after = m.matchTo (ri, nullptr, nullptr);
+      auto ld = [&] (int, int s2) -> const kk::Sample* { return m.bank.get (s2); };
+      const double d0 = kk::featDist (kk::featOf (kk::renderKick (before, 44100.0, ld), 44100.0), ri.feat), d1 = kk::featDist (kk::featOf (kk::renderKick (after, 44100.0, ld), 44100.0), ri.feat);
+      std::printf ("      match distance %.1f -> %.1f\n", d0, d1); CHECK (d1 < d0, "match brings the kick closer to the reference"); }
     std::printf (fails ? "PROC TEST FAILED\n" : "PROC TEST OK\n"); return fails ? 1 : 0;
 }

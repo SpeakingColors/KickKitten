@@ -14,6 +14,7 @@ public:
     void resetTo100();
     void zoomBy (float f);
     int zoomPercent() const;
+    void showForTest (bool renderTab, const juce::File& reference);   // snapshot tool: open the Render tab and/or load a reference
 private:
     void timerCallback() override;
     KickProcessor& proc;

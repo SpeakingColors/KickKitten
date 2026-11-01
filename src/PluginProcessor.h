@@ -7,6 +7,7 @@
 #include <memory>
 #include <vector>
 #include "engine/Bank.h"
+#include "engine/Match.h"
 
 struct BankEntry { const char* name; const char* group; const char* sub; int len; };
 struct FactoryPreset { const char* name; const char* tag; const char* kv; const char* env; };
@@ -58,6 +59,9 @@ public:
     void setStateInformation (const void*, int) override;
 
     // ---- sound state that is not a host parameter (guarded by stateLock) ----
+    std::vector<float> renderOffline (const kk::Params&, double& rate);   // one finished kick on the calling thread (Render tab)
+    uint64_t paramGen() const { return gen.load(); }
+    kk::Params matchTo (const kk::RefInfo&, const std::function<void(int)>&, const std::atomic<bool>*);   // reference match on a copy of the current settings
     kk::Params snapshot() const;                 // all values as the engine wants them
     int  getSrc (int layer) const;               void setSrc (int layer, int v);
     int  getLayerPol (int layer) const;          void setLayerPol (int layer, int v);
@@ -100,6 +104,8 @@ private:
     static juce::AudioProcessorValueTreeState::ParameterLayout makeLayout();
     void parameterChanged (const juce::String&, float) override { requestRender(); }
     void run() override;
+    void syncEnvFromKnobs();   // Start, Tail, Sweep and Curve knobs move the pitch dots (as in the mockup); runs on the render thread
+    std::atomic<int> syncHold { 0 }; double lastSync[4] { 900, 55, 30, 1 };
     std::shared_ptr<const KickResult> renderBase (const kk::Params&, double rate);
     void startVoice (int midi, bool useNote);
     void rebuildBankHolder();
