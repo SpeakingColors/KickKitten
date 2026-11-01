@@ -1,0 +1,7 @@
+Kick Kitten bundles two fonts, both under the SIL Open Font License 1.1 (https://openfontlicense.org):
+
+  Barlow Condensed   Copyright 2017 The Barlow Project Authors (https://github.com/jpt/barlow)
+  JetBrains Mono     Copyright 2020 The JetBrains Mono Project Authors (https://github.com/JetBrains/JetBrainsMono)
+
+The fonts are used as shipped (converted from WOFF to TTF, no changes to the design). They are embedded in the plugin so it works offline.
+The full licence text is at https://openfontlicense.org/open-font-license-official-text/

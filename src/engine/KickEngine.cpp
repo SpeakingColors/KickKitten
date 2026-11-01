@@ -259,6 +259,9 @@ double lufs400(const std::vector<float>& b, double sr)
     return -0.691 + 10 * std::log10(best / (double) W + 1e-12);
 }
 
+double envValue(const std::vector<EnvDot>& e, double ms) { return envF(e, ms); }
+std::vector<float> renderLayer(const Params& p, int layer, double fs, int N, const SampleLookup& lookup) { return genLayer(p, layer, fs, N, lookup); }
+
 std::vector<float> renderKick(const Params& p, double sr, const SampleLookup& lookup, GlueInfo* glue)
 {
     constexpr int OS = 4;
