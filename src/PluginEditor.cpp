@@ -479,10 +479,10 @@ void KickEditor::Content::buildPitch()
         txt (g, "ms", (float) gm.r + 4, (float) gm.b + 12, col::cap, Justification::left);
         g.setColour (col::body.withAlpha (0.08f)); g.fillRect (Rectangle<float> ((float) gm.l, (float) FY (300), (float) (gm.r - gm.l), (float) (FY (120) - FY (300))));
         g.setColour (col::sub.withAlpha (0.08f)); g.fillRect (Rectangle<float> ((float) gm.l, (float) FY (60), (float) (gm.r - gm.l), (float) (FY (40) - FY (60))));
-        txt (g, "BODY 120-300", (float) gm.r - 4, (float) FY (300) + 10, col::body, Justification::right); txt (g, "SUB 40-60", (float) gm.r - 4, (float) FY (40) - 3, col::sub, Justification::right);
+        txt (g, "BODY 120-300", (float) gm.r - 4, (float) FY (300) + 10, col::body, Justification::right); txt (g, "SUB 40-60", (float) gm.r - 30, (float) FY (40) - 3, col::sub, Justification::right);
         const double tail = P[id::tailHz]; const float yt = (float) FY (tail);
         { Path dl; dl.startNewSubPath ((float) gm.l, yt); dl.lineTo ((float) gm.r, yt); Path st; const float dash[2] = { 5.f, 4.f }; PathStrokeType (1.f).createDashedStroke (st, dl, dash, 2); g.setColour (col::curve2); g.fillPath (st); }
-        const auto nn = hz2note (tail); txt (g, nn.name + " " + String (tail, 1) + " Hz", (float) gm.r + 3, yt + 3, col::curve2, Justification::left);
+        const auto nn = hz2note (tail); txt (g, nn.name + " " + String (tail, 1) + " Hz", (float) gm.l + 6, yt - 4, col::curve2, Justification::left);
         auto E = proc.getEnv(); const bool hasEnv = E.size() >= 2; if (! hasEnv) E = legacyEnv (P);
         Path cv;
         for (int i = 0; i <= 200; ++i)
@@ -491,15 +491,35 @@ void KickEditor::Content::buildPitch()
             const float x = (float) FX (ms), y = (float) FY (clampd (f, 20, 4000)); if (i) cv.lineTo (x, y); else cv.startNewSubPath (x, y);
         }
         g.setColour (col::curve); g.strokePath (cv, PathStrokeType (2.f));
+        // dots first, then labels with collision avoidance (dragged dot, first and last dot have priority)
+        std::vector<Rectangle<float>> placed { Rectangle<float> ((float) gm.r - 90, (float) FY (300), 90, 14), Rectangle<float> ((float) gm.r - 90, (float) FY (40) - 14, 90, 14), Rectangle<float> ((float) gm.l + 4, yt - 16, 90, 14) }; std::vector<size_t> order;
+        const int dragged = ((PitchCanvas*) cvPitch)->dragType == 1 ? ((PitchCanvas*) cvPitch)->dragK : -1;
         for (size_t k = 0; k < E.size(); ++k)
         {
             const float x = (float) FX (E[k].ms), y = (float) FY (clampd (E[k].hz, 20, 4000));
-            g.setColour (col::ground); g.fillEllipse (x - 6, y - 6, 12, 12); g.setColour (((PitchCanvas*) cvPitch)->dragType == 1 && ((PitchCanvas*) cvPitch)->dragK == (int) k ? col::read : col::curve); g.drawEllipse (x - 6, y - 6, 12, 12, 2.f);
+            g.setColour (col::ground); g.fillEllipse (x - 6, y - 6, 12, 12); g.setColour (dragged == (int) k ? col::read : col::curve); g.drawEllipse (x - 6, y - 6, 12, 12, 2.f);
+        }
+        if (dragged >= 0) order.push_back ((size_t) dragged);
+        order.push_back (0); if (E.size() > 1) order.push_back (E.size() - 1);
+        for (size_t k = 1; k + 1 < E.size(); ++k) order.push_back (k);
+        std::vector<char> done (E.size(), 0);
+        for (size_t k : order)
+        {
+            if (k >= E.size() || done[k]) continue; done[k] = 1;
+            if (k > 0 && k + 1 == E.size() && std::abs (E[k].hz - tail) < 0.5 && dragged != (int) k) continue;   // the tail label already says it
+            const float x = (float) FX (E[k].ms), y = (float) FY (clampd (E[k].hz, 20, 4000));
             const auto dn = hz2note (E[k].hz); const int cr = (int) std::lround (dn.cents);
             const String lab = String (E[k].hz, E[k].hz < 100 ? 1 : 0) + " Hz " + dn.name + (cr ? String (" ") + (cr > 0 ? "+" : "") + String (cr) : String());
-            const bool right = x < gm.r - 120;
-            txt (g, lab, right ? x + 10 : x - 10, y + (k == 0 ? 3 : -9), col::read, right ? Justification::left : Justification::right);
-            if (k > 0 || E[k].ms > 0) txt (g, String (E[k].ms, 1) + " ms", right ? x + 10 : x - 10, y + 4, col::cap, right ? Justification::left : Justification::right);
+            const String lab2 = String (E[k].ms, 1) + " ms";
+            const bool right = x < gm.r - 120; const float tw = jmax (lab.length(), lab2.length()) * 6.4f;
+            const float lx = right ? x + 10 : x - 10 - tw, ly = y + (k == 0 ? -6.f : -26.f);
+            const Rectangle<float> box (lx, ly, tw, 24.f);
+            bool hit = ! (dragged == (int) k);
+            if (hit) { hit = false; for (auto& r : placed) if (r.intersects (box.expanded (2.f))) { hit = true; break; } }
+            if (hit) continue;
+            placed.push_back (box);
+            txt (g, lab, right ? x + 10 : x - 10, y + (k == 0 ? 3 : -17), col::read, right ? Justification::left : Justification::right);
+            if (k > 0 || E[k].ms > 0) txt (g, lab2, right ? x + 10 : x - 10, y + (k == 0 ? 4 : -5), col::cap, right ? Justification::left : Justification::right);
         }
     };
     envResetBtn = addBtn (byId ("envReset"), BS::mini, "Simple curve", [this] { proc.setEnv ({}); });
