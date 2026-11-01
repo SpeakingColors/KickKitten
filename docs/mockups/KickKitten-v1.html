@@ -60,6 +60,8 @@ button.on{background:var(--sel);border-color:var(--selb)}
 .panel h2{position:relative}
 .panel h2 .mini{position:absolute;right:0;top:-2px;height:18px;padding:0 8px;font-size:11px;letter-spacing:.03em;text-transform:none}
 .panel h2 .mini[hidden]{display:none}
+.panel h2 .minis{position:absolute;right:0;top:-2px;display:flex;gap:4px}.panel h2 .minis .mini{position:static}
+#refStat{font-size:10px;color:var(--dim);margin-left:4px;letter-spacing:.02em;text-transform:none;font-weight:400}
 .panel h2 small{font-weight:500;color:var(--cap);letter-spacing:.06em;text-transform:none;margin-left:8px}
 .panel canvas{display:block;width:100%;flex:1;min-height:0;background:var(--display);border-radius:3px;border:1px solid var(--line)}
 .ctl{display:flex;align-items:flex-end;gap:4px;height:104px;flex:none;padding-top:18px}
@@ -221,7 +223,7 @@ button.chip:hover{border-color:var(--selb)}
         <div class="ctl" id="ctlPitch"></div>
       </section>
       <section class="panel" id="pSpec" style="grid-column:2;grid-row:1">
-        <h2>Spectrum <small>first 370 ms</small></h2>
+        <h2 data-tip="Spectrum of the first 370 ms of the kick, in dB.">Spectrum<span id="refStat" hidden></span><span class="minis"><button class="mini" id="refBtn" data-tip="Load a kick you like (.wav) as a reference. Its spectrum is drawn in amber over ours so you can see the difference. You can also drop a file on the spectrum.">Reference</button><button class="mini" id="matchBtn" hidden data-tip="Fits Tail, Decay, Shape, Hold, Swell, Tone EQ, Thump, Punch, Crack and the click level to the reference automatically. Takes a few seconds. You can Undo by loading the preset again.">Match</button><button class="mini" id="refClr" hidden data-tip="Remove the reference.">Clear</button></span></h2>
         <canvas id="cvSpec" aria-label="Spectrum of the kick"></canvas>
         <div class="ctl" id="ctlSpec"></div>
       </section>
@@ -334,6 +336,8 @@ const SPEC=[
  {id:'eMud',label:'Mud',min:0,max:100,unit:' %',dec:0,def:0,tip:'Cuts the boxy zone around 250 Hz, up to 12 dB. That is where kicks sound cardboard or cheap.'},
  {id:'eChest',label:'Chest',min:0,max:100,unit:' %',dec:0,def:0,tip:'Wide boost around 80 Hz, up to 8 dB. The part you feel in your chest.'},
  {id:'eShine',label:'Shine',min:0,max:100,unit:' %',dec:0,def:0,tip:'Boosts everything above 2.5 kHz, up to 15 dB. Brings out the click so the kick cuts through.'},
+ {id:'ceil',label:'Ceiling',min:-6,max:0,unit:' dB',dec:1,def:-0.3,tip:'True-peak ceiling in dB. If the kick would go above this after conversion (inter-sample peaks), it is turned down to sit exactly on it. -0.3 dB is safe for any export.'},
+ {id:'palign',label:'Align',min:0,max:1,unit:'',dec:0,def:1,tip:'Phase align. Flips a layer upside down if it starts against the body, so click, attack and body push the same way and the punch is the same every time.'},
  {id:'out',label:'Output',min:-24,max:6,unit:' dB',dec:1,def:0,tip:'Output level in dB. Watch the meter on the right.'}
 ];
 const LK=[];
@@ -592,7 +596,8 @@ function renderKick(p,sr){
     const click=t<tauC*8?bp*Math.exp(-t/tauC):0;
     x[i]=0.5*(tone+cl*click);
   }
-  for(let i=0;i<3;i++){const L=genLayer(p,i,fs,N);if(L)for(let q=0;q<N;q++)x[q]+=L[q];}
+  const pal=p.palign!==0,na=Math.min(N,Math.floor(0.004*fs));
+  for(let i=0;i<3;i++){const L=genLayer(p,i,fs,N);if(L){let sg=1;if(pal){let d=0;for(let q=0;q<na;q++)d+=x[q]*L[q];if(d<0)sg=-1;}for(let q=0;q<N;q++)x[q]+=sg*L[q];}}
   {const fl=Math.floor(0.01*fs);for(let q=Math.max(0,N-fl);q<N;q++)x[q]*=(N-q)/fl;}
   // colour stages (Purr Trio) with closed-loop RMS match
   const dr=p.drive/100,tr=p.trans/100,fz=p.fuzz/100,any=dr>0||tr>0||fz>0;
@@ -634,8 +639,21 @@ function renderKick(p,sr){
     if(ab>0.8)a=Math.sign(a)*(0.8+0.2*Math.tanh((ab-0.8)/0.2));
     out[j]=a;
   }
+  {const cl=Math.pow(10,(p.ceil===undefined?-0.3:p.ceil)/20),tp=truePeak(out);if(tp>cl){const sc=cl/tp;for(let j=0;j<No;j++)out[j]*=sc;}}
   return out;
 }
+/* true peak: 4x interpolation with a windowed sinc, so inter-sample peaks are counted */
+const TPH=(()=>{const T=16,h=[];for(let ph=1;ph<4;ph++){const a=[];for(let k=-T+1;k<=T;k++){const d=k-ph/4,s=Math.abs(d)<1e-9?1:Math.sin(Math.PI*d)/(Math.PI*d),w=0.5+0.5*Math.cos(Math.PI*d/T);a.push(s*w);}h.push(a);}return {T,h};})();
+function truePeak(b){let m=0;for(let i=0;i<b.length;i++){const a=Math.abs(b[i]);if(a>m)m=a;}
+  const {T,h}=TPH;for(let i=0;i<b.length;i++){for(let ph=0;ph<3;ph++){let a=0;const hp=h[ph];for(let k=0;k<hp.length;k++){const idx=i+k-T+1;if(idx>=0&&idx<b.length)a+=hp[k]*b[idx];}a=Math.abs(a);if(a>m)m=a;}}
+  return m;}
+function lufs400(b,sr){const kb=(f0,Q,G,hp)=>{const K=Math.tan(Math.PI*f0/sr);if(hp){const a0=1+K/Q+K*K;return{b:[1,-2,1],a1:2*(K*K-1)/a0,a2:(1-K/Q+K*K)/a0};}
+    const Vh=Math.pow(10,G/20),Vb=Math.pow(Vh,0.4996667741545416),a0=1+K/Q+K*K;return{b:[(Vh+Vb*K/Q+K*K)/a0,2*(K*K-Vh)/a0,(Vh-Vb*K/Q+K*K)/a0],a1:2*(K*K-1)/a0,a2:(1-K/Q+K*K)/a0};};
+  const st=[kb(1681.974450955533,0.7071752369554196,3.999843853973347,false),kb(38.13547087602444,0.5003270373238773,0,true)];
+  let y=Float64Array.from(b);for(const f of st){let x1=0,x2=0,y1=0,y2=0;for(let i=0;i<y.length;i++){const x0=y[i],o=f.b[0]*x0+f.b[1]*x1+f.b[2]*x2-f.a1*y1-f.a2*y2;x2=x1;x1=x0;y2=y1;y1=o;y[i]=o;}}
+  const W=Math.min(y.length,Math.floor(0.4*sr));let best=0,s=0;for(let i=0;i<W;i++)s+=y[i]*y[i];best=s;
+  for(let i=W;i<y.length;i++){s+=y[i]*y[i]-y[i-W]*y[i-W];if(s>best)best=s;}
+  return -0.691+10*Math.log10(best/W+1e-12);}
 function fft(re,im){const n=re.length;
   for(let i=1,j=0;i<n;i++){let b=n>>1;for(;j&b;b>>=1)j^=b;j^=b;if(i<j){let t=re[i];re[i]=re[j];re[j]=t;t=im[i];im[i]=im[j];im[j]=t;}}
   for(let l=2;l<=n;l<<=1){const a=-2*Math.PI/l,wr=Math.cos(a),wi=Math.sin(a),hl=l>>1;
@@ -749,7 +767,7 @@ keySel.addEventListener('change',()=>{if(keySel.value)set('tailHz',parseFloat(ke
 const keyChip=document.createElement('button');keyChip.className='chip';keyChip.id='keyChip';
 keyChip.dataset.tip='Click to snap Tail to the exact note shown (0 ct). Example: F1 +45 ct becomes F1 0 ct.';
 keyChip.addEventListener('click',()=>{const m=Math.round(12*Math.log2(P.tailHz/440)+69);set('tailHz',440*Math.pow(2,(m-69)/12));});
-function syncKey(){
+function syncKey(){if(window.__bassUpd)window.__bassUpd();
   let m='';for(const k of KEYS)if(Math.abs(Math.log2(P.tailHz/k[1]))*1200<1)m=String(k[1]);
   keySel.value=m;const n=hz2note(P.tailHz);const cr=Math.round(n.cents);keyChip.textContent=`${n.name} ${cr>=0?'+':''}${cr} ct`;
 }
@@ -757,6 +775,17 @@ function syncKey(){
   const c=$('#ctlPitch'),g=group(c,'Tuning');
   const cell=document.createElement('div');cell.className='cell';cell.innerHTML='<div class="kl">Key</div>';cell.append(keySel,keyChip);g.appendChild(cell);
   mkKnob(g,'tailHz');
+  {const bc=document.createElement('div');bc.className='cell';bc.innerHTML='<div class="kl">Bass root</div>';
+   const bs=document.createElement('select');bs.id='bassSel';bs.setAttribute('aria-label','Bass root');
+   bs.dataset.tip='Pick the root note of your bassline. The chip below tells you if the kick tail sits on it, on its fifth, or clashes with it. A clash makes the low end muddy.';
+   bs.innerHTML='<option value="-1">Off</option>'+NOTE.map((n,i)=>`<option value="${i}">${n}</option>`).join('');
+   try{bs.value=localStorage.getItem('kk-bass')||'-1';}catch(e){}
+   const bch=document.createElement('span');bch.className='chip';bch.id='bassChip';bch.textContent='-';
+   const upd=()=>{try{localStorage.setItem('kk-bass',bs.value);}catch(e){}const b=+bs.value;if(b<0){bch.textContent='-';bch.style.color='';return;}
+     const m=Math.round(12*Math.log2(P.tailHz/440)+69),d=(((m-b)%12)+12)%12;
+     let t,c;if(d===0){t='on root';c='var(--m-ok)';}else if(d===7){t='on fifth';c='var(--m-ok)';}else if(d===5){t='on fourth';c='var(--m-warn)';}else{t=(d>6?d-12:d)+' st off';c='var(--m-clip)';}
+     bch.textContent=t;bch.style.color=c;};
+   bs.addEventListener('change',upd);window.__bassUpd=upd;bc.append(bs,bch);g.appendChild(bc);upd();}
   const g2=group(c,'Fall');['startHz','sweep','curve','swell'].forEach(i=>mkKnob(g2,i));
   const g3=group($('#ctlWave'),'Click');['clickLvl','clickFreq','clickLen'].forEach(i=>mkKnob(g3,i));
   const g4=group($('#ctlWave'),'Layers');['body','sub'].forEach(i=>mkKnob(g4,i));
@@ -773,12 +802,15 @@ function syncKey(){
   {const gb=group($('#ctlSauce2'),'Low and body');['sThump','sBloom','sPunch'].forEach(i=>mkKnob(gb,i));}
   {const gl=group($('#ctlSauce3'),'Top and loudness');['sCrack','sLoud'].forEach(i=>mkKnob(gl,i));}
   const g8=group($('#ctlOut'));mkKnob(g8,'out');
+  mkKnob(g8,'ceil');
   const pb=document.createElement('div');pb.className='cell';
   pb.innerHTML='<div class="kl">Polarity</div>';
   const pbtn=document.createElement('button');pbtn.id='polBtn';pbtn.textContent='Ø';pbtn.dataset.tip='Flip the polarity of the kick. If the kick and the bass cancel each other and the low end sounds thin, flip one of them and compare.';
-  pbtn.addEventListener('click',()=>{P.pol*=-1;dirty=true;presetEdited();});pb.appendChild(pbtn);g8.appendChild(pb);
-  const pk=document.createElement('div');pk.className='cell';pk.innerHTML='<div class="kl">Render peak</div><span class="chip" id="rpk">-</span>';g8.appendChild(pk);
-  const lv=document.createElement('div');lv.className='cell';lv.innerHTML='<div class="kl">RMS</div><span class="chip" id="rrms" data-tip="Average level of the first 120 ms. This is the loudness you feel. Sauce raises it while the peak stays put.">-</span>';g8.appendChild(lv);
+  pbtn.addEventListener('click',()=>{P.pol*=-1;dirty=true;presetEdited();});pb.appendChild(pbtn);
+  const abtn=document.createElement('button');abtn.id='alignBtn';abtn.className='chip';abtn.dataset.tip=S.palign.tip;
+  const alUi=()=>{abtn.textContent=P.palign!==0?'Align on':'Align off';abtn.classList.toggle('on',P.palign!==0);};
+  abtn.addEventListener('click',()=>{P.palign=P.palign!==0?0:1;alUi();dirty=true;presetEdited();abtn.blur();});alUi();window.__alUi=alUi;pb.appendChild(abtn);g8.appendChild(pb);
+  const pk=document.createElement('div');pk.className='cell';pk.innerHTML='<div class="kl">Levels</div><span class="chip" id="rpk" data-tip="True peak in dB (inter-sample peaks included). Stays under the Ceiling.">-</span><span class="chip" id="rrms" data-tip="Average level of the first 120 ms. This is the loudness you feel. Sauce raises it while the peak stays put.">-</span><span class="chip" id="rlufs" data-tip="K-weighted loudness of the loudest 400 ms, in LUFS. A quick way to compare two kicks by loudness.">-</span>';g8.appendChild(pk);
 }
 syncKey();
 /* layers UI */
@@ -1062,6 +1094,9 @@ function drawSpec(){
     g.beginPath();g.moveTo(l,b);for(let x=0;x<wpx;x++)g.lineTo(l+x,clamp(DY(cv[x]),t,b));g.lineTo(l+wpx,b);g.closePath();
     g.globalAlpha=.35;g.fillStyle=CSS.fill;g.fill();g.globalAlpha=1;
     g.strokeStyle=CSS.curve;g.lineWidth=1.5;g.beginPath();for(let x=0;x<wpx;x++){const y=clamp(DY(cv[x]),t,b);x?g.lineTo(l+x,y):g.moveTo(l+x,y);}g.stroke();}
+  if(typeof REF!=='undefined'&&REF){const wpx=Math.floor(r-l),cv=specCurve(REF.mags,REF.sr,wpx,f0,f1);
+    g.strokeStyle='#FFA600';g.lineWidth=1.5;g.beginPath();for(let x=0;x<wpx;x++){const y=clamp(DY(cv[x]+(mags?0:0)),t,b);x?g.lineTo(l+x,y):g.moveTo(l+x,y);}g.stroke();}
+  if(REFMSG)txt(g,REFMSG,r-4,t+10,'#FFA600','right');
   const xt=FX(P.tailHz);g.strokeStyle=CSS.curve2;g.setLineDash([4,3]);g.beginPath();g.moveTo(xt,t);g.lineTo(xt,b);g.stroke();g.setLineDash([]);
   const nn=hz2note(P.tailHz);txt(g,`${nn.name} ${P.tailHz.toFixed(1)}`,xt+4,t+10,CSS.curve2,'left');
 }
@@ -1133,8 +1168,8 @@ function updateChips(){
   let first=0;for(let i=0;i<Math.min(buf.length,2000);i++){if(Math.abs(buf[i])>0.01*pk){first=buf[i];break;}}
   const pdb=pk>0?20*Math.log10(pk):-99;
   $('#chips').innerHTML=`<span class="chip">Tail ends ${te.toFixed(0)} ms</span><span class="chip">${pct.toFixed(0)}% of a 16th (${sx.toFixed(1)} ms)</span><span class="chip">1st cycle ${first>=0?'▲ +':'▼ -'}</span>`;
-  $('#rpk').textContent=pdb.toFixed(1)+' dB';$('#rpk').style.color=dbCol(pdb);
-  {const n=Math.min(buf.length,Math.floor(0.12*sr));let s=0;for(let i=0;i<n;i++)s+=buf[i]*buf[i];const rd=10*Math.log10(s/Math.max(1,n)+1e-12);$('#rrms').textContent=rd.toFixed(1)+' dB';$('#rrms').style.color=dbCol(rd);}
+  {const tp=truePeak(buf),td=tp>0?20*Math.log10(tp):-99;$('#rpk').textContent='TP '+td.toFixed(1)+' dB';$('#rpk').style.color=dbCol(td);$('#rlufs').textContent='LUFS '+lufs400(buf,sr).toFixed(1);}
+  {const n=Math.min(buf.length,Math.floor(0.12*sr));let s=0;for(let i=0;i<n;i++)s+=buf[i]*buf[i];const rd=10*Math.log10(s/Math.max(1,n)+1e-12);$('#rrms').textContent='RMS '+rd.toFixed(1)+' dB';$('#rrms').style.color=dbCol(rd);}
   $('#polBtn').classList.toggle('on',P.pol<0);
 }
 function refresh(){
@@ -1248,7 +1283,7 @@ let cur={list:'f',i:0},edited=false;
 const all=()=>FACTORY.map((p,i)=>({p,list:'f',i})).concat(user.map((p,i)=>({p,list:'u',i})));
 function saveUser(){try{localStorage.setItem('kk-user',JSON.stringify(user));}catch(e){}}
 function getCur(){return cur.list==='f'?FACTORY[cur.i]:user[cur.i];}
-function load(pr){P.env=validEnv(pr.p.env);envUi();SPEC.forEach(s=>{if(typeof pr.p[s.id]==='number')P[s.id]=clamp(pr.p[s.id],s.min,s.max);});P.pol=pr.p.pol===-1?-1:1;
+function load(pr){P.env=validEnv(pr.p.env);envUi();SPEC.forEach(s=>{if(typeof pr.p[s.id]==='number')P[s.id]=clamp(pr.p[s.id],s.min,s.max);});P.pol=pr.p.pol===-1?-1:1;if(window.__alUi)window.__alUi();
   LK.forEach(k=>{const v=pr.p[k];P[k]=k.endsWith('pol')?(v===-1?-1:1):(Number.isInteger(v)&&v>=0&&v<SRCN.length?v:0);});
   SPEC.forEach(s=>knobs[s.id]&&knobs[s.id].ui());limUi();slotEls.forEach((e,i)=>slotRefresh(i));syncKey();dirty=true;edited=false;nameUi();}
 function nameUi(){const c=getCur();$('#pName').textContent=(c?c.name:'')+(edited?' *':'');
@@ -1360,6 +1395,65 @@ try{bubbles=localStorage.getItem('kk-bub')!=='0';const l=localStorage.getItem('k
 readCss();fitDefault();
 function boot(){load(FACTORY[0]);buildPiano();setScale(defScale);nameUi();requestAnimationFrame(frame);}
 if(document.fonts&&document.fonts.ready)document.fonts.ready.then(boot,boot);else boot();
-window.__kk={wavBlob:()=>wavBlob(),getGL:()=>GL,P,BANK,SRCN,renderKick,SPEC,FACTORY,spectrumDb,load,set,get sr(){return sr;},get buf(){return buf;},refresh};
+
+/* ---------- reference match ---------- */
+let REF=null,REFMSG='';
+function setRefMsg(t){REFMSG=t.trim();drawSpec();}
+const REFQ=[];for(let i=0;i<32;i++)REFQ.push(30*Math.pow(9000/30,i/31));
+const REFT=[5,15,30,50,80,120,170,220,270,320];
+function featOf(b,sr){
+  const m=spectrumDb(b,sr),df=sr/NF,sp=[];let mx=1e-12;
+  for(const f of REFQ){const ka=Math.max(1,Math.floor(f*0.89/df)),kb=Math.max(ka+1,Math.ceil(f*1.12/df));let e=0;for(let k=ka;k<kb;k++)e+=m[k]*m[k];sp.push(e/(kb-ka));mx=Math.max(mx,sp[sp.length-1]);}
+  const spd=sp.map(e=>10*Math.log10(e/mx+1e-12));
+  const w=2*Math.floor(0.006*sr),en=[];let em=1e-9;
+  for(const t of REFT){const c=Math.floor(t/1000*sr);let a=0,n=0;for(let i=Math.max(0,c-w/2);i<Math.min(b.length,c+w/2);i++){a+=Math.abs(b[i]);n++;}en.push(n?a/n:0);em=Math.max(em,en[en.length-1]);}
+  return {sp:spd,en:en.map(e=>20*Math.log10(e/em+1e-6))};
+}
+function featDist(a,b){let d=0;for(let i=0;i<a.sp.length;i++){const e=Math.max(-60,a.sp[i])-Math.max(-60,b.sp[i]);d+=e*e/a.sp.length;}
+  let e2=0;for(let i=0;i<a.en.length;i++){const e=Math.max(-50,a.en[i])-Math.max(-50,b.en[i]);e2+=e*e/a.en.length;}return d+0.6*e2;}
+function setRef(raw,srr,name){
+  let x=Float32Array.from(raw),pk=0;for(const v of x)pk=Math.max(pk,Math.abs(v));if(pk<1e-6)return false;
+  let s0=0;while(s0<x.length&&Math.abs(x[s0])<0.05*pk)s0++;s0=Math.max(0,s0-Math.floor(0.0005*srr));
+  x=x.slice(s0,s0+Math.floor(0.5*srr));for(let i=0;i<x.length;i++)x[i]/=pk;
+  const mags=spectrumDb(x,srr);
+  let tail=0;{const lp=Float32Array.from(x);for(let pass=0;pass<4;pass++){const a=Math.exp(-2*Math.PI*160/srr);let y=0;for(let i=0;i<lp.length;i++){y=(1-a)*lp[i]+a*y;lp[i]=y;}}
+    const i0=Math.floor(0.12*srr),i1=Math.min(lp.length-1,Math.floor(0.24*srr));let zc=[];for(let i=i0+1;i<i1;i++)if(lp[i-1]<=0&&lp[i]>0)zc.push(i-1+(-lp[i-1])/(lp[i]-lp[i-1]));
+    if(zc.length>2)tail=(zc.length-1)/((zc[zc.length-1]-zc[0])/srr);}
+  if(!(tail>25&&tail<120)){const df=srr/NF;let bi=0,bv=0;for(let k=Math.floor(30/df);k<Math.floor(110/df);k++)if(mags[k]>bv){bv=mags[k];bi=k;}tail=bi*df;}
+  REF={buf:x,sr:srr,mags,name:name||'reference',tail,feat:featOf(x,srr)};
+  setRefMsg(' ref: '+REF.name.slice(0,22)+' (tail '+REF.tail.toFixed(1)+' Hz)');$('#matchBtn').hidden=false;$('#refClr').hidden=false;drawSpec();return true;
+}
+async function loadRefFile(f){
+  try{const ab=await f.arrayBuffer();const AC=window.AudioContext||window.webkitAudioContext;const c=ctx||new AC();
+    const d=await c.decodeAudioData(ab.slice(0));const ch=d.getChannelData(0),n=d.numberOfChannels;const m=new Float32Array(ch.length);
+    for(let k=0;k<n;k++){const cd=d.getChannelData(k);for(let i=0;i<m.length;i++)m[i]+=cd[i]/n;}
+    if(!setRef(m,d.sampleRate,f.name.replace(/\.[^.]+$/,'')))setRefMsg(' that file is silent');}
+  catch(e){setRefMsg(' could not read that file');}
+}
+let matching=false;
+async function matchRef(){
+  if(!REF||matching)return;matching=true;const st={set textContent(v){setRefMsg(v);}};
+  const tail=clamp(REF.tail,S.tailHz.min,S.tailHz.max);set('tailHz',tail);
+  const KS=[['decay',1],['ampShape',0],['hold',0],['swell',0],['eMud',0],['eChest',0],['eShine',0],['sThump',0],['sPunch',0],['sCrack',0],['clickLvl',0],['clickFreq',1],['clickLen',1]];
+  const cost=pp=>{const o=renderKick(pp,sr);return featDist(featOf(o,sr),REF.feat);};
+  let cur={};KS.forEach(([k])=>cur[k]=P[k]);let best=cost({...P,...cur}),n=0;const tot=KS.length*2*4;
+  for(let round=0;round<4;round++){const step=0.12/Math.pow(2,round);
+    for(const [k,lg] of KS){const sp=S[k];
+      for(const dir of [1,-1]){
+        let v=lg?cur[k]*Math.exp(dir*step*Math.log(sp.max/Math.max(sp.min,1e-3))*0.35):cur[k]+dir*step*(sp.max-sp.min);
+        v=clamp(v,sp.min,sp.max);n++;
+        if(v===cur[k])continue;
+        const c=cost({...P,...cur,[k]:v});
+        if(c<best){best=c;cur[k]=v;}
+        if(n%3===0){st.textContent=' matching '+Math.round(100*n/tot)+'%';await new Promise(r=>setTimeout(r,0));}
+      }}}
+  KS.forEach(([k])=>set(k,cur[k]));
+  st.textContent=' matched (distance '+best.toFixed(1)+')';matching=false;return best;
+}
+$('#refBtn').addEventListener('click',()=>{const i=document.createElement('input');i.type='file';i.accept='audio/*,.wav';i.onchange=()=>{if(i.files[0])loadRefFile(i.files[0]);};i.click();});
+$('#matchBtn').addEventListener('click',matchRef);
+$('#refClr').addEventListener('click',()=>{REF=null;REFMSG='';setRefMsg('');$('#matchBtn').hidden=true;$('#refClr').hidden=true;drawSpec();});
+{const cs=$('#cvSpec');cs.addEventListener('dragover',e=>{e.preventDefault();});cs.addEventListener('drop',e=>{e.preventDefault();const f=e.dataTransfer&&e.dataTransfer.files[0];if(f)loadRefFile(f);});}
+window.__kk={setRef,matchRef,costNow:()=>featDist(featOf(renderKick(P,sr),sr),REF.feat),get REF(){return REF;},truePeak,lufs400,wavBlob:()=>wavBlob(),getGL:()=>GL,P,BANK,SRCN,renderKick,SPEC,FACTORY,spectrumDb,load,set,get sr(){return sr;},get buf(){return buf;},refresh};
 })();
 </script>

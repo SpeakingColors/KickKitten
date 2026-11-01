@@ -58,3 +58,9 @@ The Sauce panel runs a chain inside the render: band split (sub below 110 Hz, bo
 - v1.20: Trance Classic 138 reworked: real kick 45 attack and click, no Drive or Clip, much cleaner (harmonics -36 dB).
 - v1.21: older presets (Psy, Hard Dance, Punchy, Dark, Subby, Deep, Phat, Uplifting, Hard-Hitter) lengthened with a plateau shape.
 - v1.22: GUI fix, knob rows no longer run outside their panels (Amp, Output, Purr Trio, Glue timing).
+
+## v1.23
+- Reference match: load or drop any kick (.wav) on the Spectrum; its curve shows in amber; Match fits Tail, Decay, Shape, Hold, Swell, Tone EQ, Thump, Punch, Crack and click level to it (distance to the reference drops 2 to 4 times on the 45 test kicks).
+- Phase align: layers that start against the body are flipped, so click, attack and body add up.
+- True-peak ceiling (default -0.3 dB), true-peak, RMS and LUFS read-outs.
+- Bass root chip: tells you if the kick tail sits on the root or the fifth of your bassline, or clashes.
