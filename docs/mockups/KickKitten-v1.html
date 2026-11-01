@@ -731,7 +731,7 @@ function arc(r,a0,a1){const p=a=>[r*Math.sin(a*Math.PI/180),-r*Math.cos(a*Math.P
 function fmtSm(s,v){const u=s.unit.trim();let n=Math.abs(v)>=1000?(v/1000).toFixed(1)+'k':v.toFixed(s.dec);if(v>0&&u==='st')n='+'+n;return n+(u==='ms'||u==='st'?u:'');}
 function mkKnob(parent,id,sm){
   const s=S[id],el=document.createElement('div');el.className='knob'+(sm?' sm':'');el.tabIndex=0;el.setAttribute('role','slider');
-  el.setAttribute('aria-label',s.label);el.dataset.tip=s.tip;
+  el.setAttribute('aria-label',s.label);el.dataset.tip=s.tip;el.dataset.id=id;
   el.innerHTML=`<div class="kl">${s.label}</div><svg viewBox="-24 -24 48 48"><path class="ktrack" d="${arc(19,-135,135)}"/><path class="kval"/><line class="kptr" x1="0" y1="0" x2="0" y2="-13"/></svg><div class="kv"></div>`;
   parent.appendChild(el);
   const kval=el.querySelector('.kval'),kptr=el.querySelector('.kptr'),kv=el.querySelector('.kv');
@@ -1454,6 +1454,6 @@ $('#refBtn').addEventListener('click',()=>{const i=document.createElement('input
 $('#matchBtn').addEventListener('click',matchRef);
 $('#refClr').addEventListener('click',()=>{REF=null;REFMSG='';setRefMsg('');$('#matchBtn').hidden=true;$('#refClr').hidden=true;drawSpec();});
 {const cs=$('#cvSpec');cs.addEventListener('dragover',e=>{e.preventDefault();});cs.addEventListener('drop',e=>{e.preventDefault();const f=e.dataTransfer&&e.dataTransfer.files[0];if(f)loadRefFile(f);});}
-window.__kk={setRef,matchRef,costNow:()=>featDist(featOf(renderKick(P,sr),sr),REF.feat),get REF(){return REF;},truePeak,lufs400,wavBlob:()=>wavBlob(),getGL:()=>GL,P,BANK,SRCN,renderKick,SPEC,FACTORY,spectrumDb,load,set,get sr(){return sr;},get buf(){return buf;},refresh};
+window.__kk={bankBuf,setRef,matchRef,costNow:()=>featDist(featOf(renderKick(P,sr),sr),REF.feat),get REF(){return REF;},truePeak,lufs400,wavBlob:()=>wavBlob(),getGL:()=>GL,P,BANK,SRCN,renderKick,SPEC,FACTORY,spectrumDb,load,set,get sr(){return sr;},get buf(){return buf;},refresh};
 })();
 </script>

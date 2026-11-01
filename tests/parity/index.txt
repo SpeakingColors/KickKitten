@@ -1,0 +1,22 @@
+44100
+0 Trance Classic 138
+1 Trance Snap
+2 Trance Pop
+3 Trance Tick
+4 Trance Knock
+5 Trance Crack
+6 Trance Sizzle
+7 Trance Long
+8 Trance Deep
+9 Trance Rolling
+10 Trance Hard
+11 Uplifting 138
+12 Dark Rolling
+13 Punchy Click
+14 Subby Deep
+15 Hard Dance
+16 Phat Trance
+17 Hard-Hitter F
+18 Psy Knock G
+19 Deep Progressive G#
+20 Init
