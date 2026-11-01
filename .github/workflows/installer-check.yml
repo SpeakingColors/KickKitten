@@ -1,0 +1,28 @@
+# Fast check (about 2 minutes): compiles the Windows installer script with dummy files, so script mistakes show up
+# before the long release build.
+name: installer-check
+on:
+  push:
+    paths: ['packaging/**', '.github/workflows/installer-check.yml']
+  workflow_dispatch:
+concurrency:
+  group: installer-check-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  inno:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - name: Dummy stage
+        run: |
+          mkdir -p stage/vst3/Contents/x86_64-win
+          echo x > "stage/vst3/Contents/x86_64-win/Kick Kitten.vst3"; echo x > "stage/Kick Kitten.exe"; echo x > stage/KickKitten-manual.pdf
+      - name: Compile the script
+        run: |
+          iscc="/c/Program Files (x86)/Inno Setup 6/ISCC.exe"
+          [ -f "$iscc" ] || choco install innosetup -y --no-progress
+          "$iscc" "//DName=KickKitten" "//DProduct=Kick Kitten" "//DVersion=0.0.1" packaging/windows.iss
+          ls -l Output

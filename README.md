@@ -1,8 +1,29 @@
 # Kick Kitten
 
-Free, open source trance kick drum synth (VST3, Linux first). Studio 87.
+Free and open source trance kick maker. VST3 instrument and Standalone app for Windows, macOS and Linux. Studio 87.
 
-Status: spec stage. See [docs/spec-v0.1.md](docs/spec-v0.1.md).
+![Kick Kitten](docs/manual-shot.png)
+
+**Status: test build (v0.1).** The engine matches the approved mockup number for number and the plugin passes its own state and preset tests, but it has not been tuned by ear yet and has not been tested in real DAWs. Please open an issue if something breaks.
+
+## Download
+Get the zip from the [releases page](https://github.com/SpeakingColors/KickKitten/releases). It holds an installer for each system (with uninstaller), a PDF manual, INSTALL.txt and SHA256SUMS. Everything works offline. No telemetry, no network calls.
+
+## Build from source
+Needs CMake 3.22 or newer and a C++17 compiler. JUCE is fetched at configure time, or pass `-DKICKKITTEN_JUCE_DIR=/path/to/JUCE`.
+
+    cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+    cmake --build build --parallel
+
+Tests: `-DKICKKITTEN_BUILD_TOOLS=ON` adds an offscreen snapshot tool and a processor test. `kickkitten_parity` compares the C++ engine with the mockup render.
+
+## Layout
+- `src/engine`: the sound engine (plain C++, a port of the mockup JS)
+- `src/PluginProcessor.*`, `src/PluginEditor.*`: JUCE plugin and the native editor
+- `docs/mockups`: the approved HTML mockup (the editor is generated from it)
+- `packaging`, `.github/workflows`: installers and release build
+
+Support: [ko-fi.com/studio87](https://ko-fi.com/studio87). Licence: AGPL-3.0-or-later.
 
 ## Sound bank
 

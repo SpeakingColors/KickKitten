@@ -1,0 +1,25 @@
+# Intro
+Kick Kitten makes trance kicks. Three layers (click, body, sub) follow one pitch envelope; a colour stage (Purr Trio), a Sauce stage, glue, tone and a limiter finish the sound. It is a VST3 instrument and a standalone app. Play a note and you get the kick; the kick is rendered in the background, so turning a knob updates the sound within a moment.
+
+Kick Kitten is free and open source (AGPL-3.0-or-later). It has no telemetry, makes no network calls and collects nothing.
+
+This is a test build. The sound engine was checked by numbers against the mockup, but the plugin has not been tuned by ear yet.
+
+# Quick start
+- Pick a preset with the arrows in the header, or click the preset name for the list.
+- Press Hit (or the Space bar) to hear the kick. Loop plays a kick on every fourth 16th note at the BPM you set; Bass test adds a simple bass one octave above the tail note.
+- Set Tail to the root note of your track, so kick and bass add up instead of fighting.
+- Shape the pitch with the pitch envelope: drag a dot, drag the line to bend it, double click to add or remove a dot.
+- In your DAW, play any MIDI note. Same plays the same kick on every key; Pitched re-renders the kick for each note.
+- Drag the waveform into your DAW to drop the kick as a .wav, or use Export for a 24-bit mono .wav.
+
+# Recommendations
+- Tune Tail to your track's root note first, then adjust Start and Sweep. About 25 to 35 ms of Sweep is tight.
+- Use the click to keep the kick audible inside a wall of supersaws; raise it a little rather than raising the whole kick.
+- Check the 16th readout in Output and timing: it shows how long the tail runs against one 16th at your BPM.
+- Watch the meter. Ceiling sets the true-peak limit of the finished kick.
+- Save your own presets with Save; they are plain files you can copy and share.
+
+# Install
+- The installer for your system is in the zip, with an uninstaller. Everything works offline.
+- Your saved presets are kept when you uninstall unless you choose to delete them.
