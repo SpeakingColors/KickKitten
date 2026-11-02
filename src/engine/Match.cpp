@@ -2,6 +2,7 @@
 #include <cmath>
 #include <algorithm>
 #include <complex>
+static const double kPi = 3.14159265358979323846;
 namespace kk
 {
 namespace
@@ -12,7 +13,7 @@ void fftInPlace(std::vector<std::complex<double>>& a)
     for (size_t i = 1, j = 0; i < n; ++i) { size_t bit = n >> 1; for (; j & bit; bit >>= 1) j ^= bit; j ^= bit; if (i < j) std::swap(a[i], a[j]); }
     for (size_t len = 2; len <= n; len <<= 1)
     {
-        const double ang = -2.0 * M_PI / (double) len; const std::complex<double> wl(std::cos(ang), std::sin(ang));
+        const double ang = -2.0 * kPi / (double) len; const std::complex<double> wl(std::cos(ang), std::sin(ang));
         for (size_t i = 0; i < n; i += len)
         {
             std::complex<double> w(1, 0);
@@ -28,7 +29,7 @@ double clampd(double v, double a, double b) { return std::max(a, std::min(b, v))
 std::vector<float> spectrumMags(const std::vector<float>& b)
 {
     std::vector<std::complex<double>> a((size_t) kNF); double ws = 0; const size_t n = std::min(b.size(), (size_t) kNF);
-    for (int i = 0; i < kNF; ++i) { const double w = 0.5 * (1 + std::cos(M_PI * i / kNF)); ws += w; a[(size_t) i] = (size_t) i < n ? (double) b[(size_t) i] * w : 0.0; }
+    for (int i = 0; i < kNF; ++i) { const double w = 0.5 * (1 + std::cos(kPi * i / kNF)); ws += w; a[(size_t) i] = (size_t) i < n ? (double) b[(size_t) i] * w : 0.0; }
     fftInPlace(a);
     std::vector<float> m((size_t) kNF / 2); for (int k = 0; k < kNF / 2; ++k) m[(size_t) k] = (float) (2.0 * std::abs(a[(size_t) k]) / ws);
     return m;
@@ -73,7 +74,7 @@ bool makeRef(const std::vector<float>& raw, double sr, RefInfo& out)
     double tail = 0;
     {
         std::vector<double> lp(x.begin(), x.end());
-        for (int pass = 0; pass < 4; ++pass) { const double a = std::exp(-2 * M_PI * 160 / sr); double y = 0; for (auto& v : lp) { y = (1 - a) * v + a * y; v = y; } }
+        for (int pass = 0; pass < 4; ++pass) { const double a = std::exp(-2 * kPi * 160 / sr); double y = 0; for (auto& v : lp) { y = (1 - a) * v + a * y; v = y; } }
         const size_t i0 = (size_t) std::floor(0.12 * sr), i1 = std::min(lp.size() - 1, (size_t) std::floor(0.24 * sr)); std::vector<double> zc;
         for (size_t i = i0 + 1; i < i1; ++i) if (lp[i - 1] <= 0 && lp[i] > 0) zc.push_back((double) (i - 1) + (-lp[i - 1]) / (lp[i] - lp[i - 1]));
         if (zc.size() > 2) tail = (double) (zc.size() - 1) / ((zc.back() - zc.front()) / sr);
