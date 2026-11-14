@@ -8,6 +8,9 @@ on:
 concurrency:
   group: installer-check-${{ github.ref }}
   cancel-in-progress: true
+permissions:
+  contents: read
+
 jobs:
   inno:
     runs-on: windows-latest
@@ -15,7 +18,7 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Dummy stage
         run: |
           mkdir -p stage/vst3/Contents/x86_64-win
