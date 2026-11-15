@@ -11,7 +11,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
 from reportlab.lib.utils import ImageReader
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, KeepTogether, Image as RLImage, PageBreak
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, KeepTogether, Image as RLImage, PageBreak, CondPageBreak
 
 _, _mock, txt_path, shot_path, out = sys.argv[:5]
 root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -60,7 +60,18 @@ for kid, n in num.items():
     dr.ellipse([cx - 10, cy - 10, cx + 10, cy + 10], fill=(255, 123, 177), outline=(22, 22, 56))
     t = str(n); tw = dr.textlength(t, font=f)
     dr.text((cx - tw / 2, cy - 8), t, fill=(22, 22, 56), font=f)
+tour_path = os.path.join(root, "docs/tour/tour.json")
+tour = json.load(open(tour_path)) if os.path.exists(tour_path) else None
+if tour:
+    for d in tour["displays"]:
+        x, y, w, h = [v * k for v in d["r"]]; cx, cy = x + w - 12, y + 12
+        dr.ellipse([cx - 10, cy - 10, cx + 10, cy + 10], fill=(2, 235, 186), outline=(22, 22, 56))
+        tw = dr.textlength(d["letter"], font=f); dr.text((cx - tw / 2, cy - 8), d["letter"], fill=(22, 22, 56), font=f)
 buf = io.BytesIO(); im.save(buf, "PNG"); buf.seek(0)
+def crop(r, pad=10):
+    x0, y0, x1, y1 = r[0] - pad, r[1] - pad, r[0] + r[2] + pad, r[1] + r[3] + pad
+    c = im.crop((max(0, int(x0 * k)), max(0, int(y0 * k)), min(W, int(x1 * k)), min(H, int(y1 * k))))
+    b = io.BytesIO(); c.save(b, "PNG"); b.seek(0); return b, c.size
 
 sec = {}; cur = None
 for line in open(txt_path, encoding="utf-8").read().splitlines():
@@ -86,25 +97,60 @@ story.append(Paragraph("Quick start", H2))
 for t in bullets("Quick start"): story.append(Paragraph("&bull; " + esc(t), B))
 story.append(PageBreak())
 story.append(Paragraph("Interface tour", H1))
-story.append(Paragraph("Pink numbers match the control tables on the next pages. This is a picture of the real plugin window.", SM))
+story.append(Paragraph("Pink numbers match the control tables on the next pages. This is a picture of the plugin editor, rendered offscreen.", SM))
 story.append(Spacer(1, 4))
 iw = 170 * mm
 story.append(RLImage(buf, width=iw, height=iw * H / W))
 story.append(Paragraph("Signal flow: pitch envelope drives body and sub; plus click; three layers; Purr Trio colour; Sauce; glue; tone EQ; limiter; clip and ceiling; output.", SM))
-story.append(Paragraph("Controls", H2))
-for title, ids in GROUPS:
+def ctl_rows(ids, layer_prefix=False):
     rows = []
     for i in ids:
-        s = byid.get(i)
-        if not s: continue
-        label = s["label"]
-        if i[0] == "l" and i[1] in "012" and i[2:] in LAYER_LBL: label = LAYER_LBL[i[2:]]
-        rows.append([Paragraph(str(num.get(i, "")), CELLB), Paragraph(esc(label), CELLB), Paragraph(esc(rng(s)), CELL), Paragraph(esc(s.get("tip", "")), CELL)])
-    if not rows: continue
-    t = Table(rows, colWidths=[8 * mm, 20 * mm, 42 * mm, 100 * mm])
+        sp = byid.get(i)
+        if not sp: continue
+        label = sp["label"]
+        if layer_prefix and i[0] == "l" and i[1] in "012": label = "Layer %s %s" % ("ABC"[int(i[1])], LAYER_LBL.get(i[2:], label))
+        rows.append([Paragraph(str(num.get(i, "")), CELLB), Paragraph(esc(label), CELLB), Paragraph(esc(rng(sp)), CELL), Paragraph(esc(sp.get("tip", "")), CELL)])
+    return rows
+def ctl_table(rows):
+    t = Table(rows, colWidths=[8 * mm, 22 * mm, 42 * mm, 98 * mm])
     t.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"), ("BACKGROUND", (0, 0), (-1, -1), PANEL), ("LINEBELOW", (0, 0), (-1, -1), 0.5, BG),
                            ("TOPPADDING", (0, 0), (-1, -1), 4), ("BOTTOMPADDING", (0, 0), (-1, -1), 4), ("LEFTPADDING", (0, 0), (-1, -1), 5)]))
-    story.append(KeepTogether([Paragraph(esc(title), st("ph", fontSize=11.5, leading=15, textColor=LILAC, font="Helvetica-Bold", spaceBefore=8, spaceAfter=4)), t]))
+    return t
+PH = st("ph", fontSize=12.5, leading=16, textColor=LILAC, font="Helvetica-Bold", spaceBefore=6, spaceAfter=4)
+if tour:
+    story.append(Paragraph("Teal letters mark the displays and meters, pink numbers mark the controls. The next pages go panel by panel.", SM))
+    story.append(Paragraph("Displays", H2))
+    drows = [[Paragraph(d["letter"], st("dl", fontSize=8.5, leading=11, textColor=colors.HexColor("#02ebba"), font="Helvetica-Bold")), Paragraph(esc(d["text"]), CELL)] for d in tour["displays"]]
+    dt = Table(drows, colWidths=[8 * mm, 162 * mm])
+    dt.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"), ("BACKGROUND", (0, 0), (-1, -1), PANEL), ("LINEBELOW", (0, 0), (-1, -1), 0.5, BG), ("TOPPADDING", (0, 0), (-1, -1), 3), ("BOTTOMPADDING", (0, 0), (-1, -1), 3)]))
+    story.append(dt)
+    used = set()
+    def inside(kid, r):
+        x, y, w, h = pos[kid]; cx, cy = x + w / 2, y + h / 2
+        return r[0] <= cx <= r[0] + r[2] and r[1] <= cy <= r[1] + r[3]
+    for pn in tour["panels"]:
+        ids = sorted([kid for kid in num if kid not in used and inside(kid, pn["r"])], key=lambda kid: num[kid])
+        used.update(ids)
+        if not ids: continue
+        cb, (cw, ch) = crop(pn["r"]); wmm = min(170.0, 120.0 * cw / ch if ch > cw else 170.0)
+        ds = [d for d in tour["displays"] if pn["r"][0] <= d["r"][0] + 1 and d["r"][0] + d["r"][2] <= pn["r"][0] + pn["r"][2] + 1 and pn["r"][1] <= d["r"][1] and d["r"][1] + d["r"][3] <= pn["r"][1] + pn["r"][3] + 1]
+        blk = [Paragraph(esc(pn["title"]), PH), RLImage(cb, width=wmm * mm, height=wmm * mm * ch / cw)]
+        if ds: blk.append(Paragraph("Display " + "; ".join("%s: %s" % (d["letter"], esc(d["text"])) for d in ds), SM))
+        story.append(PageBreak()); story += blk + [Spacer(1, 4), ctl_table(ctl_rows(ids))]
+    rest = [kid for kid in sorted(num, key=lambda kid: num[kid]) if kid not in used]
+    if rest:
+        xs = [pos[kid] for kid in rest if kid[0] == "l" and kid[1] in "012"]
+        story.append(PageBreak()); story.append(Paragraph("Layers A, B and C", PH))
+        if xs:
+            x0 = min(r[0] for r in xs); y0 = min(r[1] for r in xs); x1 = max(r[0] + r[2] for r in xs); y1 = max(r[1] + r[3] for r in xs)
+            cb, (cw, ch) = crop([x0, y0 - 48, x1 - x0, y1 - y0 + 52]); story.append(RLImage(cb, width=170 * mm, height=170 * mm * ch / cw))
+        story += [Spacer(1, 4), ctl_table(ctl_rows(rest, True))]
+else:
+    story.append(Paragraph("Controls", H2))
+    for title, ids in GROUPS:
+        rows = ctl_rows(ids, False)
+        if rows: story.append(KeepTogether([Paragraph(esc(title), PH), ctl_table(rows)]))
+story.append(CondPageBreak(70 * mm))
 story.append(Paragraph("Under the hood", H2))
 for t in ["The kick is rendered at 4x oversampling and decimated with a sinc filter; the finished kick is soft-clipped above 0.8 and held under the true-peak Ceiling.",
           "Rendering runs on a background thread. The audio thread only plays a finished render, so a knob turn is heard when the new render is ready, not on the next buffer.",

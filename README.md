@@ -4,12 +4,17 @@
 
 Free and open source trance kick maker. VST3 instrument and Standalone app for Windows, macOS and Linux. Studio 87.
 
-![Kick Kitten](docs/manual-shot.png)
+<p align="center"><img src="docs/screenshot.png" width="900" alt="Kick Kitten editor"></p>
+<p align="center"><sub>The plugin editor, rendered offscreen by the repo's snapshot tool. The approved HTML mockup is in <code>docs/mockups</code>.</sub></p>
 
-**Status: test build (v0.1).** The engine matches the approved mockup number for number and the plugin passes its own state and preset tests, but it has not been tuned by ear yet and has not been tested in real DAWs. Please open an issue if something breaks.
+**Status: test build, pre-release v0.1.1.** The engine matches the approved mockup number for number and the plugin passes its own state and preset tests, but it has not been tuned by ear yet and has not been tested in real DAWs. Please open an issue if something breaks.
 
 ## Download
 Get the zip from the [releases page](https://github.com/SpeakingColors/KickKitten/releases). It holds an installer for each system (with uninstaller), a PDF manual, INSTALL.txt and SHA256SUMS. Everything works offline. No telemetry, no network calls.
+
+## Docs
+- [Web page](docs/index.html) with the mockup, release link and honest status.
+- The PDF manual (interface tour with numbered controls, lettered displays and one page per panel) is built in the release workflow by `tools/make_manual.py` from `assets/spec.json`, `docs/manual.txt` and `docs/tour/tour.json`. Regenerate the tour data with `python3 tools/build_tour_data.py` after the mockup or `assets/layout.json` changes.
 
 ## Build from source
 Needs CMake 3.22 or newer and a C++17 compiler. JUCE is fetched at configure time, or pass `-DKICKKITTEN_JUCE_DIR=/path/to/JUCE`.

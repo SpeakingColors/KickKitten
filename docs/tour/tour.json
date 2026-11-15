@@ -1,0 +1,167 @@
+{
+ "W": 1640,
+ "H": 946,
+ "panels": [
+  {
+   "id": "pPitch",
+   "title": "Pitch envelope",
+   "r": [
+    60,
+    50,
+    600,
+    290
+   ]
+  },
+  {
+   "id": "pWave",
+   "title": "Waveform & layers",
+   "r": [
+    60,
+    348,
+    600,
+    290
+   ]
+  },
+  {
+   "id": "pSpec",
+   "title": "Spectrum",
+   "r": [
+    668,
+    50,
+    330,
+    290
+   ]
+  },
+  {
+   "id": "pOut",
+   "title": "Output & timing",
+   "r": [
+    668,
+    348,
+    330,
+    290
+   ]
+  },
+  {
+   "id": "pSauce",
+   "title": "Sauce",
+   "r": [
+    1006,
+    50,
+    252,
+    588
+   ]
+  },
+  {
+   "id": "pGlue",
+   "title": "Glue & limiter",
+   "r": [
+    1266,
+    50,
+    250,
+    588
+   ]
+  }
+ ],
+ "displays": [
+  {
+   "id": "cvPitch",
+   "text": "Pitch envelope graph",
+   "r": [
+    69,
+    78.6,
+    582,
+    150.4
+   ],
+   "letter": "A"
+  },
+  {
+   "id": "cvSpec",
+   "text": "Spectrum of the kick",
+   "r": [
+    677,
+    78.5,
+    312,
+    150.5
+   ],
+   "letter": "B"
+  },
+  {
+   "id": "cvMeter",
+   "text": "Output level meter in dB",
+   "r": [
+    1529,
+    96.8,
+    46,
+    534.2
+   ],
+   "letter": "C"
+  },
+  {
+   "id": "cvGlue",
+   "text": "Glue compressor meter: level and gain reduction in dB over time",
+   "r": [
+    1275,
+    309,
+    232,
+    268
+   ],
+   "letter": "D"
+  },
+  {
+   "id": "cvWave",
+   "text": "Kick waveform with time ruler. Drag it into your DAW to drop the kick as a .wav file.",
+   "r": [
+    69,
+    376.6,
+    582,
+    150.4
+   ],
+   "letter": "E"
+  },
+  {
+   "id": "cvGap",
+   "text": "Kick tail against one beat at the current tempo",
+   "r": [
+    677,
+    376.5,
+    312,
+    107.5
+   ],
+   "letter": "F"
+  },
+  {
+   "id": "lw0",
+   "text": "Layer A sound waveform",
+   "r": [
+    67,
+    676,
+    487.3,
+    32
+   ],
+   "letter": "G"
+  },
+  {
+   "id": "lw1",
+   "text": "Layer B sound waveform",
+   "r": [
+    576.3,
+    676,
+    487.3,
+    32
+   ],
+   "letter": "H"
+  },
+  {
+   "id": "lw2",
+   "text": "Layer C sound waveform",
+   "r": [
+    1085.7,
+    676,
+    487.3,
+    32
+   ],
+   "letter": "I"
+  }
+ ]
+}

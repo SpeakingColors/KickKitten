@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kick Kitten</title>
+<style>
+:root{--bg:#161638;--panel:#1c1c4a;--line:#33403f;--text:#e8e6e1;--muted:#9a9690;--teal:#02EBBA;--pink:#FF1383;--amber:#FFA600}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.55 system-ui,Arial,sans-serif}
+main{max-width:860px;margin:0 auto;padding:28px 16px 48px}
+h1{margin:0 0 4px;font-size:34px} h2{color:var(--teal);font-size:20px;margin:28px 0 8px}
+a{color:var(--pink)} .muted{color:var(--muted)}
+img.shot{width:100%;height:auto;border:1px solid var(--line);border-radius:8px;display:block}
+.cap{color:var(--muted);font-size:13px;margin-top:6px}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 16px;margin:12px 0}
+.box b{color:var(--amber)} li{margin:3px 0}
+code{background:#0e0e26;padding:1px 5px;border-radius:4px}
+.card{display:block;margin:10px 0;padding:12px 16px;border:1px solid var(--line);border-radius:8px;text-decoration:none;color:var(--text);background:var(--panel)}.card b{display:block;color:var(--teal)}
+.links a{display:inline-block;margin:4px 12px 4px 0}
+</style></head><body><main>
+<h1>Kick Kitten</h1>
+<p class="muted">Trance kick maker, VST3 instrument and Standalone · Studio 87</p>
+<p>A free and open source trance kick maker. Three layers (click, body, sub) follow one pitch envelope; a colour stage (Purr Trio), a Sauce stage, glue, tone EQ and a limiter finish the sound.</p>
+<img class="shot" src="screenshot.png" alt="Kick Kitten editor, rendered offscreen from the plugin">
+<div class="cap">The plugin editor, rendered offscreen by the repo&#x27;s snapshot tool (the same picture the manual uses). The approved HTML mockup is linked below.</div>
+<div class="box"><b>Status: test build, pre-release v0.1.1</b><p>The sound engine was checked by numbers against the mockup, state save and load work and all 21 factory presets render clean. It has not been tuned by ear yet and has not been tested in real DAWs. The installers are not signed, so Windows and macOS will warn.</p></div>
+<h2>Get it, read it, try it</h2><a class="card" href="https://github.com/SpeakingColors/KickKitten/releases"><b>Releases (pre-release)</b>One zip: installers with uninstaller for Windows, macOS and Linux (Flatpak extension and a plain .vst3 tarball), PDF manual, INSTALL.txt, SHA256SUMS.</a><a class="card" href="mockups/KickKitten-v1.html"><b>Interactive mockup</b>The approved design, runs in your browser. Nothing is sent anywhere.</a><a class="card" href="https://github.com/SpeakingColors/KickKitten"><b>Source code</b>Free and open source, AGPL-3.0-or-later.</a>
+<h2>What exists today</h2><ul><li>VST3 instrument and Standalone app with the native editor ported from the mockup (the mockup is in <code>docs/mockups</code>).</li><li>21 factory presets; your own presets are plain files and are kept when you uninstall unless you choose to delete them.</li><li>A PDF manual with an interface tour (numbered controls, lettered displays, a page per panel), built from the plugin's own control data in the release workflow. The PDF is part of the release zip, not stored in the repo.</li><li>Release workflow, installer check and pluginval workflows in <code>.github/workflows</code>.</li><li>No telemetry, no network calls, nothing collected.</li></ul>
+<h2>What does not exist yet</h2><ul><li>Tuning by ear and tests in real DAWs.</li><li>Signed or notarized installers.</li></ul>
+<div class="links"><h2>Links</h2><a href="https://ko-fi.com/studio87">Support Studio 87 on Ko-fi</a></div>
+<p class="cap">AGPL-3.0-or-later. Not affiliated with or endorsed by any hardware maker named here. All trademarks belong to their owners.</p></main></body></html>
