@@ -10,7 +10,7 @@ Free and open source trance kick maker. VST3 instrument and Standalone app for W
 **Status: test build, pre-release v0.1.1.** The engine matches the approved mockup number for number and the plugin passes its own state and preset tests, but it has not been tuned by ear yet and has not been tested in real DAWs. Please open an issue if something breaks.
 
 ## Download
-Get the zip from the [releases page](https://github.com/SpeakingColors/KickKitten/releases). It holds an installer for each system (with uninstaller), a PDF manual, INSTALL.txt and SHA256SUMS. Everything works offline. No telemetry, no network calls.
+Get the zip from the [releases page](https://github.com/SpeakingColors/KickKitten/releases). It holds an installer for each system (with uninstaller), a PDF manual, INSTALL.txt and SHA256SUMS. Everything works offline.
 
 ## Docs
 - [Web page](docs/index.html) with the mockup, release link and honest status.
