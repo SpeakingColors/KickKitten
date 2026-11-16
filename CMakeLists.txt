@@ -67,3 +67,7 @@ endif()
 
 add_executable(kickkitten_match tests/matchtest.cpp src/engine/KickEngine.cpp src/engine/Params.cpp src/engine/Match.cpp)
 target_compile_features(kickkitten_match PRIVATE cxx_std_17)
+
+# Studio 87 Gear Updater link (product id and link string; no JUCE needed)
+add_executable(kickkitten_link_test tests/test_updater_link.cpp)
+target_compile_features(kickkitten_link_test PRIVATE cxx_std_17)

@@ -1,4 +1,5 @@
 #include "PluginEditor.h"
+#include "Studio87Link.h"
 #include <thread>
 #include <functional>
 #include <BinaryData.h>
@@ -1112,8 +1113,9 @@ void KickEditor::Content::showSettings()
 void KickEditor::Content::showAbout()
 {
     auto* w = new AlertWindow ("Kick Kitten " + String (KK_VERSION), "A free and open source trance kick maker by Studio 87.\nLicence: AGPL-3.0-or-later. It collects nothing and makes no network calls.\n\nYour presets live in:\n" + proc.presetDir().getFullPathName(), MessageBoxIconType::NoIcon);
-    w->addButton ("Support on Ko-fi", 2); w->addButton ("Source code", 3); w->addButton ("Close", 0, KeyPress (KeyPress::escapeKey));
-    w->enterModalState (true, ModalCallbackFunction::create ([] (int r) { if (r == 2) URL ("https://ko-fi.com/studio87").launchInDefaultBrowser(); else if (r == 3) URL ("https://github.com/SpeakingColors/KickKitten").launchInDefaultBrowser(); }), true);
+    w->addButton ("Support on Ko-fi", 2); w->addButton (studio87link::buttonText(), 4); w->addButton ("Source code", 3);
+    if (auto* ub = w->getButton (studio87link::buttonText())) ub->setTooltip (studio87link::tipText()); w->addButton ("Close", 0, KeyPress (KeyPress::escapeKey));
+    w->enterModalState (true, ModalCallbackFunction::create ([] (int r) { if (r == 2) URL ("https://ko-fi.com/studio87").launchInDefaultBrowser(); else if (r == 3) URL ("https://github.com/SpeakingColors/KickKitten").launchInDefaultBrowser(); else if (r == 4) studio87link::openUpdater ("KickKitten"); }), true);
 }
 
 //==============================================================================
