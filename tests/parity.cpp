@@ -41,6 +41,32 @@ int main(int argc, char** argv)
         std::printf("%-26s len js %zu c++ %zu  maxerr %.2e (peak %.3f)  SNR %.1f dB  %s\n", name.c_str(), nr, out.size(), err, pk, snr, ok ? "ok" : "FAIL");
         if (! ok) ++fails;
     }
+    // Aliasing: the plugin renders at 16x. Against a 32x reference (click noise off, so the renders are comparable) 16x must be
+    // closer than the mockup's 4x for every preset, and the distortion-heavy presets must be clearly improved.
+    {
+        std::ifstream idx2(root + "/tests/parity/index.txt"); double sr2; idx2 >> sr2; std::string l2; std::getline(idx2, l2);
+        while (std::getline(idx2, l2))
+        {
+            if (l2.empty()) continue;
+            const int n = std::stoi(l2.substr(0, l2.find(' '))); const std::string name = l2.substr(l2.find(' ') + 1);
+            Params p; std::ifstream pf(root + "/tests/parity/p" + std::to_string(n) + ".txt"); std::string k;
+            while (pf >> k)
+            {
+                if (k == "env") { std::string v; pf >> v; if (v != "-") { std::stringstream ss(v); std::string d; while (std::getline(ss, d, ';')) { EnvDot e; if (std::sscanf(d.c_str(), "%lf,%lf,%lf", &e.ms, &e.hz, &e.bend) >= 2) p.env.push_back(e); } } continue; }
+                double v; pf >> v;
+                if (k == "pol") p.pol = v; else if (k.size() == 5 && k[0] == 'l' && k.substr(2) == "src") p.src[k[1] - '0'] = (int) v;
+                else if (k.size() == 5 && k[0] == 'l' && k.substr(2) == "pol") p.lpol[k[1] - '0'] = (int) v;
+                else { const int i = specIndex(k.c_str()); if (i >= 0) p.v[(size_t) i] = v; }
+            }
+            p[id::clickLvl] = 0;
+            auto lk = [&] (int, int src) { return bank.get(src); };
+            auto hi = renderKick(p, sr2, lk, nullptr, 32);
+            auto snr = [&] (int os) { auto o = renderKick(p, sr2, lk, nullptr, os); double e2 = 0, r2 = 0; for (size_t i = 0; i < std::min(o.size(), hi.size()); ++i) { const double d = o[i] - hi[i]; e2 += d * d; r2 += (double) hi[i] * hi[i]; } return 10 * std::log10((r2 + 1e-20) / (e2 + 1e-20)); };
+            const double s4 = snr(4), s16 = snr(16); const bool ok = s16 > s4 + 8 && s16 > 30;
+            std::printf("alias %-24s 4x %.1f dB  16x %.1f dB  %s\n", name.c_str(), s4, s16, ok ? "ok" : "FAIL");
+            if (! ok) ++fails;
+        }
+    }
     std::printf("%s\n", fails ? "PARITY FAILED" : "PARITY OK");
     return fails ? 1 : 0;
 }

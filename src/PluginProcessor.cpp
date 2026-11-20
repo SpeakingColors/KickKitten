@@ -123,7 +123,7 @@ std::vector<float> KickProcessor::renderOffline (const Params& p, double& rate)
     std::shared_ptr<kk::Sample> ownCopy[3];
     { const juce::ScopedLock sl (stateLock); for (int i = 0; i < 3; ++i) ownCopy[i] = own[i]; }
     auto lookup = [&] (int layer, int s) -> const Sample* { return s == 7 ? ownCopy[layer].get() : bank.get (s); };
-    rate = sr.load(); return renderKick (p, rate, lookup, nullptr);
+    rate = sr.load(); return renderKick (p, rate, lookup, nullptr, kFinalOversample);
 }
 
 Params KickProcessor::matchTo (const RefInfo& ref, const std::function<void(int)>& progress, const std::atomic<bool>* stop)
@@ -142,7 +142,7 @@ std::shared_ptr<const KickResult> KickProcessor::renderBase (const Params& p, do
     { const juce::ScopedLock sl (stateLock); for (int i = 0; i < 3; ++i) ownCopy[i] = own[i]; }
     auto lookup = [&] (int layer, int s) -> const Sample* { return s == 7 ? ownCopy[layer].get() : bank.get (s); };
     auto r = std::make_shared<KickResult>();
-    r->sr = rate; r->pcm = renderKick (p, rate, lookup, &r->glue);
+    r->sr = rate; r->pcm = renderKick (p, rate, lookup, &r->glue, kFinalOversample);
     r->tailRef = p[id::tailHz];
     r->tp = truePeak (r->pcm); r->lufs = lufs400 (r->pcm, rate);
     { const size_t n = std::min (r->pcm.size(), (size_t) std::floor (0.12 * rate)); double s = 0; for (size_t i = 0; i < n; ++i) s += (double) r->pcm[i] * r->pcm[i]; r->rms = 10 * std::log10 (s / (double) std::max<size_t> (1, n) + 1e-12); }
@@ -217,7 +217,7 @@ void KickProcessor::run()
             std::shared_ptr<kk::Sample> ownCopy[3];
             { const juce::ScopedLock sl (stateLock); for (int i = 0; i < 3; ++i) ownCopy[i] = own[i]; }
             auto lookup = [&] (int layer, int s) -> const Sample* { return s == 7 ? ownCopy[layer].get() : bank.get (s); };
-            auto v = std::make_shared<std::vector<float>> (renderKick (q, sr.load(), lookup, nullptr));
+            auto v = std::make_shared<std::vector<float>> (renderKick (q, sr.load(), lookup, nullptr, kFinalOversample));
             if (gen.load() != done) continue;
             auto np = std::make_shared<Published> (*pub); np->notes[(size_t) want] = v;
             { juce::SpinLock::ScopedLockType l (pubLock); current = np; }

@@ -262,9 +262,8 @@ double lufs400(const std::vector<float>& b, double sr)
 double envValue(const std::vector<EnvDot>& e, double ms) { return envF(e, ms); }
 std::vector<float> renderLayer(const Params& p, int layer, double fs, int N, const SampleLookup& lookup) { return genLayer(p, layer, fs, N, lookup); }
 
-std::vector<float> renderKick(const Params& p, double sr, const SampleLookup& lookup, GlueInfo* glue)
+std::vector<float> renderKick(const Params& p, double sr, const SampleLookup& lookup, GlueInfo* glue, int OS)
 {
-    constexpr int OS = 4;
     const double fs = sr * OS, hold = p[id::hold] / 1000, dec = p[id::decay] / 1000, len = hold + dec + 0.025;
     const int N = (int) std::ceil(len * fs);
     std::vector<float> x((size_t) N, 0.f);
@@ -333,7 +332,7 @@ std::vector<float> renderKick(const Params& p, double sr, const SampleLookup& lo
             const double o = v - px + R * py; px = v; py = o; x[(size_t) i] = (float) o;
         }
     }
-    const int M = 48; std::vector<double> h((size_t) (2 * M + 1)); const double fc = 0.45 * sr / fs; double hs = 0;
+    const int M = 12 * OS; std::vector<double> h((size_t) (2 * M + 1)); const double fc = 0.45 * sr / fs; double hs = 0;
     for (int k = 0; k <= 2 * M; ++k)
     {
         const int d = k - M; const double s = d == 0 ? 2 * fc : std::sin(2 * kPi * fc * d) / (kPi * d);
